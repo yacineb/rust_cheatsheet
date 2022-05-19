@@ -1,0 +1,51 @@
+{
+    // Utilisez IntelliSense pour en savoir plus sur les attributs possibles.
+    // Pointez pour afficher la description des attributs existants.
+    // Pour plus d'informations, visitez : https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+    {
+        "type": "lldb",
+        "request": "attach",
+        "name": "Attach",
+        "program": "${workspaceFolder}/target/debug/rust_algos"
+    },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'rust_algos'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=rust_algos",
+                    "--package=rust_algos"
+                ],
+                "filter": {
+                    "name": "rust_algos",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'rust_algos'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=rust_algos",
+                    "--package=rust_algos"
+                ],
+                "filter": {
+                    "name": "rust_algos",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        }
+    ]
+}
