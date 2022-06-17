@@ -1,3 +1,1 @@
-pub fn say_hello() {
-    println!("hello");
-}
+pub mod mod_a;
