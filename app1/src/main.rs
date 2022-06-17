@@ -1,11 +1,5 @@
-use std::thread;
-
-#[derive(Clone, Debug)]
-struct Toto {}
+use lib1::say_hello;
 
 fn main() {
-    let x = "Hello".to_owned();
-
-    let x = thread::spawn(move || println!("{}", x));
-    x.join().unwrap();
+    say_hello();
 }
