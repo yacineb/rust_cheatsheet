@@ -1,27 +1,25 @@
 {
-    // Utilisez IntelliSense pour en savoir plus sur les attributs possibles.
-    // Pointez pour afficher la description des attributs existants.
-    // Pour plus d'informations, visitez : https://go.microsoft.com/fwlink/?linkid=830387
+    //  https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
     {
         "type": "lldb",
         "request": "attach",
         "name": "Attach",
-        "program": "${workspaceFolder}/target/debug/rust_algos"
+        "program": "${workspaceFolder}/target/debug/app1"
     },
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug executable 'rust_algos'",
+            "name": "Debug executable 'app1'",
             "cargo": {
                 "args": [
                     "build",
-                    "--bin=rust_algos",
-                    "--package=rust_algos"
+                    "--bin=app1",
+                    "--package=app1"
                 ],
                 "filter": {
-                    "name": "rust_algos",
+                    "name": "app1",
                     "kind": "bin"
                 }
             },
@@ -31,16 +29,16 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug unit tests in executable 'rust_algos'",
+            "name": "Debug unit tests in executable 'app1'",
             "cargo": {
                 "args": [
                     "test",
                     "--no-run",
-                    "--bin=rust_algos",
-                    "--package=rust_algos"
+                    "--bin=app1",
+                    "--package=app1"
                 ],
                 "filter": {
-                    "name": "rust_algos",
+                    "name": "app1",
                     "kind": "bin"
                 }
             },
