@@ -9,6 +9,17 @@
 
 ## Rust cheat sheet
 
+### Bootstrap environment
+
+- `cargo build` to build-install deps
+- `cargo fmt` to format the code
+- `cargo test` to test
+- etc.
+
+Testing setup:
+
+- `rustup update stable` get latest stable release of rust
+
 ### Borrowing
 
 - each &T is trivially Copy.
@@ -36,3 +47,13 @@
 - Dropping order for Variables: same than for stack frames popping. reverse order.
 - Inside of containers (array, table) : first to last
 - If a field value is moved behind &mut self, then another value must be left in place (see Default trait, std::mem::take/swap pattern)
+
+
+### Lifetime variance
+
+if 'b: 'a ('b outlives 'a), then 'b is a subtype of 'a. This is obviously not the formal definition, but it gets close enough to be
+of practical use.
+
+Any type that provides mutability is generally invariant for the same reason—for example, Cell<T> is invariant in T.
+
+Fn(T) is contravariant in T
