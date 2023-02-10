@@ -1,11 +1,11 @@
 # A very basic Rust workspace project skeleton
 
 ## Further readings
+
 [About workspace and members](https://doc.rust-lang.org/book/ch14-03-cargo-workspaces.html)  
 [About filestruct](https://doc.rust-lang.org/stable/rust-by-example/mod.html)  
 [Mods and "submods"](https://doc.rust-lang.org/stable/rust-by-example/mod/split.html)  
 [Visibility and Privacy](https://doc.rust-lang.org/reference/visibility-and-privacy.html)
-
 
 ## Rust cheat sheet
 
@@ -20,11 +20,15 @@ Testing setup:
 
 - `rustup update stable` get latest stable release of rust
 
+Clean cargo cache:
+
+- rm -rf ~/.cargo/.package-cache
+- rm -rf ~/.cargo/registry/index/*
+
 ### Borrowing
 
 - each &T is trivially Copy.
 - In a given block scope, &mut T , is exclusive
-
 
 ### Copy vs Clone
 
@@ -36,10 +40,8 @@ Testing setup:
 
 - owns a value in the heap.
 - Is not Copy, can only be moved or borrowed
--  Box::clone : Is Clone only when underlying type is Clone.
+- Box::clone : Is Clone only when underlying type is Clone.
 - Implements Deref and DerefMut.
-
-
 
 ### Drop
 
@@ -47,7 +49,6 @@ Testing setup:
 - Dropping order for Variables: same than for stack frames popping. reverse order.
 - Inside of containers (array, table) : first to last
 - If a field value is moved behind &mut self, then another value must be left in place (see Default trait, std::mem::take/swap pattern)
-
 
 ### Lifetime variance
 
@@ -57,3 +58,17 @@ of practical use.
 Any type that provides mutability is generally invariant for the same reason—for example, Cell<T> is invariant in T.
 
 Fn(T) is contravariant in T
+
+### Rust conversions
+
+Generic Implementations
+
+- `From<T> for U` implies [`Into`]`<U> for T`
+- `From` is reflexive, which means that `From<T> for T` is implemented
+- `IntoIterator` is also reflexive, which means that `IntoIterator` for `T` is implemented when `T: Iterator`
+
+### Smart Pointers
+
+- `Rc<T> is !Send and !Sync` whatever T is, because Rc is not thread safe (reference counting results in a race condition). Rc provides ability to have multiple owners
+- `RefCell<T> and Cell<T>` allow single owner, they are Send if T: Send
+- `Rc<T>` allow only build-time check immutable borrowing, `RefCell<T>` has dynamic (mutable/immutable) borrowing rules, runtime-checked
