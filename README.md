@@ -61,6 +61,14 @@ Generic Implementations
 - `From` is reflexive, which means that `From<T> for T` is implemented
 - `IntoIterator` is also reflexive, which means that `IntoIterator` for `T` is implemented when `T: Iterator`
 
+### Aliasing
+
+Event though it's possible to have 2 Box instance pointing to the same `*mut T`, that does not mean it guarantees aliasing. The reas is that rust compiler emit `#[noalias]` for Box, which means that compiler could suppress aliasing an do some optimization stuff (inlining for example if the memory lauyout fits)
+
+The only clean way to wrap Box with `MaybeUninit<T>` which suppresses `#[noalias]`
+
+## Threading
+
 ### Smart Pointers
 
 - `Rc<T> is !Send and !Sync` whatever T is, because Rc is not thread safe (reference counting results in a race condition). Rc provides ability to have multiple owners
@@ -76,15 +84,23 @@ Generic Implementations
 
 - `UnsafeCell<T>` is the only idiomatic way in rust at the moment, to get a mutable access to a shared reference
 
-### Aliasing
-
-Event though it's possible to have 2 Box instance pointing to the same `*mut T`, that does not mean it guarantees aliasing. The reas is that rust compiler emit `#[noalias]` for Box, which means that compiler could suppress aliasing an do some optimization stuff (inlining for example if the memory lauyout fits)
-
-The only clean way to wrap Box with `MaybeUninit<T>` which suppresses `#[noalias]`
-
 ### Spinlocks
 
 Spinlocks should be avoided when possible <https://matklad.github.io/2020/01/02/spinlocks-considered-harmful.html>
+
+### Tricky threading cases
+
+`T` is `!Send` but i need to "send it" across threads (example `*mut U` for any type U is automatically !Send)
+
+**"Safe" Solutions**
+
+- **Solution 1**: if T creation is cheap and has very few side effects, or if it's serializable or marshallable then don't move it and recreate one when needed.
+- **Solution 2**: store T in thread_local slots. this way you'll never need to move T between threads. Disadvantages: memory overhead, drop() for T can only be ran by threads owning slot of T
+- **Solution 3**: case when having multiple instances of T is not possible or T has a thread affinity. then you'll have no other choice than using messaging/signalling (mpsc::channel or other constructs). Disadvantage: tricky to implement, this is common in ui libraries such as *gtk+*
+
+**Unsafe solutions**
+
+- `unsafe impl Send for T {}`: that needs enabling of unstable rust channel. You might have a scenario where it's ok to Send T event if it's !Send. You'll then need to check the implementation of T.
 
 ### Atomics and memory ordering
 
