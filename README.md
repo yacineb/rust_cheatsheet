@@ -20,27 +20,27 @@ Clean cargo cache:
 
 ### Borrowing
 
-- each &T is trivially Copy.
-- In a given block scope, &mut T , is exclusive
+- each `&T` is trivially `Copy` (and `Clone` of course).
+- In a given block scope, `&mut T` , is exclusive and `!Clone`
 
 ### Copy vs Clone
 
 - Copy is supposed to be cheap. It's implicit. Any 'move' is turned into copy when the type is Copy.
 - Clone is a supertrait for Copy. any type that is Copy is also Clone.
-- Clone is explicit
+- Clone is explicit.
 
 ### Box
 
 - owns a value in the heap.
 - Is not Copy, can only be moved or borrowed
-- Box::clone : Is Clone only when underlying type is Clone.
+- Box is Clone only when underlying type is Clone.
 - Implements Deref and DerefMut.
 - Box::leak is an elegant way to get a &'static mut
 
 ### Drop
 
 - Dropping order for struct fields (by their index 'order of declaration' in their memory alignment).
-- Dropping order for Variables: same than for stack frames popping. reverse order.
+- Dropping order for Variables: same than for stack frames popping (LIFO order).
 - Inside of containers (array, table) : first to last
 - If a field value is moved behind &mut self, then another value must be left in place (see Default trait, std::mem::take/swap pattern)
 
@@ -51,7 +51,7 @@ of practical use.
 
 Any type that provides mutability is generally invariant for the same reason—for example, `Cell<T>` is invariant in T.
 
-Fn(T) is contravariant in T
+`Fn(T)` is contravariant in T
 
 ### Rust conversions
 
@@ -61,9 +61,25 @@ Generic Implementations
 - `From` is reflexive, which means that `From<T> for T` is implemented
 - `IntoIterator` is also reflexive, which means that `IntoIterator` for `T` is implemented when `T: Iterator`
 
+
+### ZST
+
+Those types occupy no space in memory. They exist purely for type-level information or as markers.
+Multiple instances of a ZST are indistinguishable because they all occupy zero space. Therefore, copying or moving a ZST is essentially a no-op.
+
+Some example of Zero-sized types:
+
+- Non capturing lambdas.
+- unit `()` type
+- PhantomData<T> and PhantomPinned.
+- Any struct with no field.
+- any [T; N] where T is ZST (all of the array items have the same address)
+
+Rust’s compiler optimizes ZSTs heavily. For instance, in a generic context, if a type is a ZST, the compiler can remove any associated memory allocations or computations related to that type, leading to more efficient code.
+
 ### Aliasing
 
-Event though it's possible to have 2 Box instance pointing to the same `*mut T`, that does not mean it guarantees aliasing. The reas is that rust compiler emit `#[noalias]` for Box, which means that compiler could suppress aliasing an do some optimization stuff (inlining for example if the memory lauyout fits)
+Event though it's possible to have 2 Box instance pointing to the same `*mut T`, that does not mean it guarantees aliasing. The reason is that rust compiler emit `#[noalias]` for Box, which means that compiler could suppress aliasing an do some optimization stuff (inlining for example if the memory lauyout fits)
 
 The only clean way to wrap Box with `MaybeUninit<T>` which suppresses `#[noalias]`
 
@@ -72,15 +88,23 @@ The only clean way to wrap Box with `MaybeUninit<T>` which suppresses `#[noalias
 ### Smart Pointers
 
 - `Rc<T> is !Send and !Sync` whatever T is, because Rc is not thread safe (reference counting results in a race condition). Rc provides ability to have multiple owners
-- `RefCell<T> and Cell<T>` allow single owner, they are Send if T: Send
-- `Rc<T>` allow only build-time check immutable borrowing, `RefCell<T>` has dynamic (mutable/immutable) borrowing rules, runtime-checked
+- `RefCell<T> and Cell<T>` allow **single owner**, they are Send if T: Send
+- `Rc<T>` allow only build-time check immutable borrowing, emulates multiple owners, cheap Clone, `RefCell<T>` has dynamic (mutable/immutable) borrowing rules, runtime-checked
 - `Rc<T>` does not allow mutating T unless T has interior mutability semantics (eg. RefCell)
 
-- `Arc<T>` is a thread-safe version of `Rc<T>`. if `T: Send, Sync` then
+- `Arc<T>` is a thread-safe version of `Rc<T>`. if `T: Send, Sync` then `Arc<T>: Send, Sync`
 
 ### Raw pointers
 
-- All of raw pointers `*mut T` `*const T` are marked as `!Send` and `!Sync` If you need to send a raw pointer, create newtype `struct Ptr(*const u8)` and unsafe impl Send for Ptr {}. Just ensure you may send it.
+- All of raw pointers `*mut T` `*const T` are marked as `!Send` and `!Sync`.
+
+If you need to send a raw pointer, create newtype `struct Ptr(*const u8)` and unsafe impl Send for Ptr {}. Just ensure you may send it.
+
+Prefer NonNull<T> over *mut T for those reasons:
+- Covariance with T.
+- Clearer intent and type safety.
+- Dereferencing is explicit and can only be done inside an unsafe block.
+- Is Send, Sync if T: Send, T:Sync
 
 - `UnsafeCell<T>` is the only idiomatic way in rust at the moment, to get a mutable access to a shared reference
 
@@ -100,12 +124,12 @@ Spinlocks should be avoided when possible <https://matklad.github.io/2020/01/02/
 
 **Unsafe solutions**
 
-- `unsafe impl Send for T {}`: that needs enabling of unstable rust channel. You might have a scenario where it's ok to Send T event if it's !Send. You'll then need to check the implementation of T.
+- `unsafe impl Send for T {}`: You might have a scenario where it's ok to Send T event if it's !Send. You'll then need to check the implementation of T.
 
 ### Atomics and memory ordering
 
 - `compare_exchange` is fairly expensive operation, spinning on `compare_exchange` can lead to "owners bounce"
-- prefer ``compares_exchange_weak`if it's a condition in a loop (more efficient on ARM especially), that doesnot generate nested loop.
+- prefer `compares_exchange_weak` if it's a condition in a loop (more efficient on ARM especially), that doesnot generate nested loop.
 - `wait free` means no compare-and-swap loop, no spinning
 
 ## Performance optimization hints
@@ -113,6 +137,7 @@ Spinlocks should be avoided when possible <https://matklad.github.io/2020/01/02/
 ### Profilers
 
 - cachegrind
+- valgrind
 - dhat
 
 ### Compilation options
@@ -158,10 +183,28 @@ Smaller integers: it is often possible to shrink types by using smaller integer 
 
 Wrap large types inside `Box`
 
+**Vec<T> vs Rc<[T]>, Box<[T]>**
+
+In scenarios where the vector never needs to be mutated, you might prefer Rc or Box , because they have lower memory overhead (no `capacity` field). Depending on scenarios, they might be better alternatives.
+
 **Advanced scenarios:**
 
 - You migh consider looking into the generated assembly code using this AMAZING [tool]<https://godbolt.org/> --> <https://github.com/compiler-explorer/compiler-explorer>
 - Using an alternative Allocator such as jemalloc or mimalloc
+
+
+### overhead of async
+
+In critical low latency apps, async can bloat performance and add overhead and complexity. Of course that depends!
+
+- Async can rely on a scheduler (ie tokio, async-std runtimes etc..) to manage tasks the overhead of scheduling can include context switching and event loop handling.
+- Async functions are converted to state machines, managing that state across await points can introduce overhead.
+- memory access patterns can be more complex and that might impact cache performance.
+
+Ideally for those kind of apps, i'd adopt hybrid approch where i use async for I/O-bound tasks (fetching data from exchanges, http requests etc..) and use synchronous code
+for decision making tasks that require low latency and predictable execution.
+
+Of course , the benefits of async in rust overweights its cost, and its cost is still low.
 
 ### Other general-puropose recommendations
 
@@ -177,7 +220,7 @@ Wrap large types inside `Box`
 [Rust cheat sheet](https://cheats.rs/)
 [Rust containers cheat sheet](https://docs.google.com/presentation/d/13IgYIal8xClkBGJz-3WSIGduZEPhnSCOq29Ssrg5QZc/edit?usp=sharing)
 [Rust perf book](https://nnethercote.github.io/perf-book)
-[About workspace and members](https://doc.rust-lang.org/book/ch14-03-cargo-workspaces.html)  
-[About filestruct](https://doc.rust-lang.org/stable/rust-by-example/mod.html)  
-[Mods and "submods"](https://doc.rust-lang.org/stable/rust-by-example/mod/split.html)  
+[About workspace and members](https://doc.rust-lang.org/book/ch14-03-cargo-workspaces.html)
+[About filestruct](https://doc.rust-lang.org/stable/rust-by-example/mod.html)
+[Mods and "submods"](https://doc.rust-lang.org/stable/rust-by-example/mod/split.html)
 [Visibility and Privacy](https://doc.rust-lang.org/reference/visibility-and-privacy.html)
