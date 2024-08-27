@@ -61,6 +61,19 @@ Generic Implementations
 - `From` is reflexive, which means that `From<T> for T` is implemented
 - `IntoIterator` is also reflexive, which means that `IntoIterator` for `T` is implemented when `T: Iterator`
 
+### Static lifetime promotion
+
+Any stuff which is known at compile-time : literals, const. are defacto `'static`.
+
+### Functions
+
+Any Fn **which does not capture any variable**:
+
+- Is zero-sized.
+- coerces to `fn(_) -> _` (a function pointer)
+- is `'static`
+
+Function pointers are regular pointers and have same size than `usize`.
 
 ### ZST
 
@@ -100,13 +113,22 @@ The only clean way to wrap Box with `MaybeUninit<T>` which suppresses `#[noalias
 
 If you need to send a raw pointer, create newtype `struct Ptr(*const u8)` and unsafe impl Send for Ptr {}. Just ensure you may send it.
 
-Prefer NonNull<T> over *mut T for those reasons:
+Prefer `NonNull<T>` over *mut T for those reasons:
+
 - Covariance with T.
 - Clearer intent and type safety.
 - Dereferencing is explicit and can only be done inside an unsafe block.
 - Is Send, Sync if T: Send, T:Sync
 
 - `UnsafeCell<T>` is the only idiomatic way in rust at the moment, to get a mutable access to a shared reference
+
+## Variance
+
+- Types providing interior mutability of an inner T are usually invariant: `UnsafeCell<T>`, `Cell<T>`.
+- `&'a T` is covariant in both `T` and `'a`
+- `*mut T` is invariant in T.
+- `*const T` is covariant in T.
+- fn(T) -> U is covariant in U and contravariant in T.
 
 ### Spinlocks
 
@@ -192,7 +214,6 @@ In scenarios where the vector never needs to be mutated, you might prefer Rc or 
 - You migh consider looking into the generated assembly code using this AMAZING [tool]<https://godbolt.org/> --> <https://github.com/compiler-explorer/compiler-explorer>
 - Using an alternative Allocator such as jemalloc or mimalloc
 
-
 ### overhead of async
 
 In critical low latency apps, async can bloat performance and add overhead and complexity. Of course that depends!
@@ -206,14 +227,21 @@ for decision making tasks that require low latency and predictable execution.
 
 Of course , the benefits of async in rust overweights its cost, and its cost is still low.
 
-### Other general-puropose recommendations
+### Design recommendations
+
+- Type-driven design: Leverage type system to enforce invariants. For example if you except an integer to be strictly positive, use NonZeroU32 instead of u32.
+- Parse-don't validate , use the `Newtype pattern`
+- Leverage state type pattern , using ZSTs and generics: <https://cliffle.com/blog/rust-typestate/>
+
+### Other general-puropose performance recommendations
 
 - Avoid when possible dynamic dispatch/vtable (&dyn Trait)
 - For threading sync primitives prefer using `parking_lot` crate over std implementations.
 - Eliminate bound checks on arrays/vecs, numbers computation [cookbook](<https://github.com/Shnatsel/bounds-check-cookbook/>)
 - Logging/debugging can slow down a program
 - Make expensive computations/allocations lazy
-- Cache efficieny/cache locality. prefer contiguous data access, data that fits cache lines has much faster memory access
+- Cache efficieny/cache locality. prefer contiguous data access, data that fits cache lines has much faster memory access.
+- Leverage std::mem::take and std::mem::swap for types implementiung Default in some scenario can avoid unnessary memory allocations especially when mutating.
 
 ## Further readings
 
@@ -224,3 +252,4 @@ Of course , the benefits of async in rust overweights its cost, and its cost is 
 [About filestruct](https://doc.rust-lang.org/stable/rust-by-example/mod.html)
 [Mods and "submods"](https://doc.rust-lang.org/stable/rust-by-example/mod/split.html)
 [Visibility and Privacy](https://doc.rust-lang.org/reference/visibility-and-privacy.html)
+[Best of rust tools](https://blessed.rs/crates)
