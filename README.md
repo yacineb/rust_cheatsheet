@@ -75,6 +75,10 @@ Any Fn **which does not capture any variable**:
 
 Function pointers are regular pointers and have same size than `usize`.
 
+### Generics
+
+- Use trait with associated type when only and only 1 implementation is expected for a type for that generic parameter. (for iterators for example, whtever the iteratee type is, the iterator impl is the same)
+
 ### ZST
 
 Those types occupy no space in memory. They exist purely for type-level information or as markers.
@@ -84,7 +88,7 @@ Some example of Zero-sized types:
 
 - Non capturing lambdas.
 - unit `()` type
-- PhantomData<T> and PhantomPinned.
+- `PhantomData<T>` and PhantomPinned.
 - Any struct with no field.
 - any [T; N] where T is ZST (all of the array items have the same address)
 
