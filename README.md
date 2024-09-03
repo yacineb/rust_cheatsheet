@@ -18,6 +18,11 @@ Clean cargo cache:
 - rm -rf ~/.cargo/.package-cache
 - rm -rf ~/.cargo/registry/index/*
 
+### PartialEq vs Eq
+
+- Not all sets have a total ordering. float types are an example with NaN, (+/-)Inf, cases when comparison has undefined result.
+- `Eq` is for total ordering: reflexive, symmetric and transitive.
+
 ### Borrowing
 
 - each `&T` is trivially `Copy` (and `Clone` of course).
