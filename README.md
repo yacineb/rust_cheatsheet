@@ -49,14 +49,59 @@ Clean cargo cache:
 - Inside of containers (array, table) : first to last
 - If a field value is moved behind &mut self, then another value must be left in place (see Default trait, std::mem::take/swap pattern)
 
-### Lifetime variance
+## Variance
 
-if 'b: 'a ('b outlives 'a), then 'b is a subtype of 'a. This is obviously not the formal definition, but it gets close enough to be
+- Types providing interior mutability of an inner T are usually invariant: `UnsafeCell<T>`, `Cell<T>`.
+- `&'a T` is covariant in both `T` and `'a`
+- `*mut T` is invariant in T.
+- `*const T` is covariant in T.
+- fn(T) -> U is covariant in U and contravariant in T.
+
+### Lifetimes
+
+- if 'b: 'a ('b outlives 'a), then 'b is a subtype of 'a. This is obviously not the formal definition, but it gets close enough to be
 of practical use.
 
-Any type that provides mutability is generally invariant for the same reason—for example, `Cell<T>` is invariant in T.
+- Any type that provides mutability is generally invariant for the same reason—for example, `Cell<T>` is invariant in T.
 
-`Fn(T)` is contravariant in T
+- `Fn(T)` is contravariant in T
+
+- T is a superset of both &T and &mut T
+
+- &T and &mut T are disjoint sets
+
+- T: 'static should be read as "T is bounded by a 'static lifetime"
+
+- if T: 'static then T can be a borrowed type with a 'static lifetime or an owned type
+        - since T: 'static includes owned types that means T
+        - can be dynamically allocated at run-time
+        - does not have to be valid for the entire program
+        - can be safely and freely mutated
+        - can be dynamically dropped at run-time
+        - can have lifetimes of different durations
+
+- T:'a is more general and more flexible than &'a T, &'a T implies T:'a
+
+- T: 'a accepts owned types, owned types which contain references, and references
+
+- &'a T only accepts references
+
+- if T: 'static then T: 'a since 'static >= 'a for all 'a
+
+- Rust compiler error messages suggest fixes which will make your program compile which is not that same as fixes which will make you program compile and best suit the
+
+- lifetimes cannot grow or shrink or change in any way at run-time and they are statically checked at compile time
+
+- Rust borrow checker will always choose the shortest possible lifetime for a variable assuming all code paths can be taken
+
+- try not to re-borrow mut refs as shared refs, or you're gonna have a bad time
+
+- re-borrowing a mut ref doesn't end its lifetime, even if the ref is dropped
+
+### Global allocator
+
+- jemalloc used to be the default allocation in rust. and now it's the default system allocator. The default system allocation is well-known, and jemalloc had compatibility issues especially with windows. another reason is that it does not work with valgrind and it has binary size overhead (300kb). For most of scenarios the default system alloator is OK.
+- For heavy memory workloads, jemalloc has a better performance.
 
 ### Rust conversions
 
@@ -130,14 +175,6 @@ Prefer `NonNull<T>` over *mut T for those reasons:
 - Is Send, Sync if T: Send, T:Sync
 
 - `UnsafeCell<T>` is the only idiomatic way in rust at the moment, to get a mutable access to a shared reference
-
-## Variance
-
-- Types providing interior mutability of an inner T are usually invariant: `UnsafeCell<T>`, `Cell<T>`.
-- `&'a T` is covariant in both `T` and `'a`
-- `*mut T` is invariant in T.
-- `*const T` is covariant in T.
-- fn(T) -> U is covariant in U and contravariant in T.
 
 ### Spinlocks
 
