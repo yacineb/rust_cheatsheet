@@ -200,6 +200,21 @@ Spinlocks should be avoided when possible <https://matklad.github.io/2020/01/02/
 - prefer `compares_exchange_weak` if it's a condition in a loop (more efficient on ARM especially), that doesnot generate nested loop.
 - `wait free` means no compare-and-swap loop, no spinning
 
+### Mutex
+
+- std::sync:Mutex provides:
+        - poisoning: if the lock holder panics then the mutex becomes poinsed (any attempt to take the lock will panic)
+        - uses system mutex, kernel space
+        - Guarantees fairness: all of the threads have the same chance to take the lock.
+        - The thread is block if waiting of (parked). That causes context-swicth overhead.
+        - Does not provide reentrance.
+
+- Mutex from parking lot:
+  - Much less overhead, more efficient for cases when locks are taken briefly. Active wait, yielding mechanism minimises context-switch. much likely to run in use space.
+  - no fairness gurantees.
+  - Less memory overhead.
+  - Provides reentrance and timeouts
+
 ## Performance optimization hints
 
 ### Profilers
