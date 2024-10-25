@@ -250,6 +250,78 @@ Atomics and memory ordering
 - Target newest CPU instructions: If you do not care that much about the compatibility of your binary on older (or other types of) processors, you can tell the compiler to generate the newest (and potentially fastest) instructions specific to a certain CPU architecture. As an example `$ RUSTFLAGS="-C target-cpu=native" cargo build --release`
 - inlining: usually you don't need to explicitly annotate function with `#[inline()]` (because compiler is smart enought) but in some scenarios that could make a difference
 
+### Reduce binary size
+
+- Default `panic!` behaviour is unwinding, this has overhead in terms of code and processing. One optimization is to make panic! abort directly:
+
+```toml
+[profile.release]
+panic = 'abort'
+```
+
+- print dependencies: `cargo tree`
+
+- Binary size profiler: <https://github.com/google/bloaty>. For wasm use `twiggy`: <https://github.com/rustwasm/twiggy>
+
+### Speed up build
+
+- For Generics: Use an Inner Non-Generic Function If you have a generic function, it will be compiled for every type you use it with. This can be a problem if you have a lot of different types. A common solution is to use an inner non-generic function. This way, the compiler will only compile the inner function once. This is a trick often used in the standard library. For example, the implementation of read_to_string.
+- Wraps deps as dylib: <https://github.com/rksm/cargo-add-dynamic>
+- Use `lld` as drop-in LLVM linker. for macos: <https://davidlattimore.github.io/posts/2024/02/04/speeding-up-the-rust-edit-build-run-cycle.html>
+- For ci, use <https://github.com/Swatinem/rust-cache> github action.
+- For github actions use faster runners: <https://www.ubicloud.com/use-cases/github-actions>
+- For ci 2: disable incremental build `CARGO_INCREMENTAL: 0`
+- deny warnings in release mode : `RUSTFLAGS: -D warnings`
+- Tweak codegen options: <https://doc.rust-lang.org/stable/rustc/codegen-options/>
+- Use the new complier frontend, parallel build:
+
+```toml
+[build]
+rustflags = ["-Z", "threads=8"]
+```
+
+- Profil build time: `cargo build --timings`
+
+- Find the most expense functions in terms of compilation: `cargo llvm-lines | head -20`
+
+- Split into workspaces, smaller code units lead to better build speed (incrementality)
+
+- Turn off non-required features : <https://github.com/ToBinio/cargo-features-manager>
+
+- Speed up local development on macos:
+
+```toml
+[profile.dev]
+split-debuginfo = "unpacked"
+```
+
+- Example of optimized compilation options on `Bevy` project:
+
+```toml
+# Add the contents of this file to `config.toml` to enable "fast build" configuration. Please read the notes below.
+
+# NOTE: For maximum performance, build using a nightly compiler
+# If you are using rust stable, remove the "-Zshare-generics=y" below (as well as "-Csplit-debuginfo=unpacked" when building on macOS).
+
+[target.x86_64-unknown-linux-gnu]
+linker = "/usr/bin/clang"
+rustflags = ["-Clink-arg=-fuse-ld=lld", "-Zshare-generics=y"]
+
+# NOTE: you must manually install https://github.com/michaeleisel/zld on mac. you can easily do this with the "brew" package manager:
+# `brew install michaeleisel/zld/zld`
+[target.x86_64-apple-darwin]
+rustflags = ["-C", "link-arg=-fuse-ld=/usr/local/bin/zld", "-Zshare-generics=y", "-Csplit-debuginfo=unpacked"]
+
+[target.x86_64-pc-windows-msvc]
+linker = "rust-lld.exe"
+rustflags = ["-Zshare-generics=y"]
+
+# Optional: Uncommenting the following improves compile times, but reduces the amount of debug info to 'line number tables only'
+# In most cases the gains are negligible, but if you are on macos and have slow compile times you should see significant gains.
+#[profile.dev]
+#debug = 1
+````
+
 ### PGO
 
 Profile-guided optimization [PGO](https://doc.rust-lang.org/rustc/profile-guided-optimization.html) is a compilation model where you compile your program, run it on sample data while collecting profiling data, and then use that profiling data to guide a second compilation of the program.
