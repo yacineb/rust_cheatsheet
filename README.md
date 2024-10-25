@@ -194,7 +194,9 @@ Spinlocks should be avoided when possible <https://matklad.github.io/2020/01/02/
 
 - `unsafe impl Send for T {}`: You might have a scenario where it's ok to Send T event if it's !Send. You'll then need to check the implementation of T.
 
-### Atomics and memory ordering
+### Lock-free / wait-free
+
+Atomics and memory ordering
 
 - `compare_exchange` is fairly expensive operation, spinning on `compare_exchange` can lead to "owners bounce"
 - prefer `compares_exchange_weak` if it's a condition in a loop (more efficient on ARM especially), that doesnot generate nested loop.
@@ -214,6 +216,22 @@ Spinlocks should be avoided when possible <https://matklad.github.io/2020/01/02/
   - no fairness gurantees.
   - Less memory overhead.
   - Provides reentrance and timeouts
+
+### JoinSet and LocalSet
+
+- A JoinSet can be used to await the completion of some or all of the tasks in the set. The set is not ordered, and the tasks will be returned in the order they complete.
+
+- LocalSet: In some cases, it is necessary to run one or more futures that do not implement Send and thus are unsafe to send between threads. In these cases, a local task set may be used to schedule one or more !Send futures to run together on the same thread.
+
+### Other sync primitives
+
+- Barrier: A barrier will block n-1 threads which call wait() and then wake up all threads at once when the nth thread calls wait(). Used for preventing interleaving in some scenarios and do coordination of computation.
+
+- CondVar
+
+- Notify
+
+- OneShot
 
 ## Performance optimization hints
 
