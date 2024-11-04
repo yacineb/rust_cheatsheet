@@ -233,6 +233,10 @@ Atomics and memory ordering
 
 - OneShot
 
+## Pinning and self-referential structs
+
+- For self referential structs you might use the excellent: <https://github.com/someguynamedjosh/ouroboros>
+
 ## Performance optimization hints
 
 ### Profilers
