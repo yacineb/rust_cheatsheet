@@ -292,6 +292,8 @@ rustflags = ["-Z", "threads=8"]
 
 - Turn off non-required features : <https://github.com/ToBinio/cargo-features-manager>
 
+- Use the amazing utility for easy features toggling: <https://docs.rs/cfg_aliases/latest/cfg_aliases/>
+
 - Speed up local development on macos:
 
 ```toml
