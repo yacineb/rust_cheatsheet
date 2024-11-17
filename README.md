@@ -256,16 +256,32 @@ Atomics and memory ordering
 
 ### Reduce binary size
 
-- Default `panic!` behaviour is unwinding, this has overhead in terms of code and processing. One optimization is to make panic! abort directly:
+1/ Default `panic!` behaviour is unwinding, this has overhead in terms of code and processing. One optimization is to make panic! abort directly:
 
 ```toml
 [profile.release]
 panic = 'abort'
 ```
 
-- print dependencies: `cargo tree`
+This does not work for `wasm-pack build`. For wasm you should either:
 
-- Binary size profiler: <https://github.com/google/bloaty>. For wasm use `twiggy`: <https://github.com/rustwasm/twiggy>
+- The very hard option and not always possible: compile into `!#[no_std]` and set an panic handler:
+
+```rust
+#[cfg(not(test))]
+# [panic_handler]
+fn panic_handler(info: &core::panic::PanicInfo<'_>) -> ! {
+        unsafe {
+                core::arch::wasm32::unreachable()
+        }
+}
+```
+
+- Otherwise go `nightly` and check the possible -Z options
+
+2/ Print dependencies: `cargo tree`
+
+3/ Binary size profiler: <https://github.com/google/bloaty>. For wasm use `twiggy`: <https://github.com/rustwasm/twiggy>
 
 ### Speed up build
 
