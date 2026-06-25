@@ -1,3 +1,4 @@
+(function () {
 function setsEqual(a, b) {
   if (!Array.isArray(a) || !Array.isArray(b)) return false;
   if (a.length !== b.length) return false;
@@ -56,3 +57,4 @@ function gradeSurvey(questions, answers) {
 const api = { setsEqual, isCorrect, classifyLevel, gradeSurvey };
 if (typeof module !== 'undefined' && module.exports) module.exports = api;
 if (typeof window !== 'undefined') window.Scoring = api;
+})();

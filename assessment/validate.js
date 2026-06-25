@@ -1,3 +1,4 @@
+(function () {
 const DIFFS = ['Basic', 'Intermediate', 'Advanced', 'Expert'];
 const TYPES = ['single', 'multi', 'boolean', 'code'];
 
@@ -30,3 +31,4 @@ function validateBank(topics) {
 const api = { validateBank };
 if (typeof module !== 'undefined' && module.exports) module.exports = api;
 if (typeof window !== 'undefined') window.Validate = api;
+})();

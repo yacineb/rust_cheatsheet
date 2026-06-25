@@ -1,3 +1,4 @@
+(function () {
 function boolToStr(v) { return v === true ? 'True' : 'False'; }
 
 function escapeHtml(s) {
@@ -64,3 +65,4 @@ if (typeof window !== 'undefined') {
     window.RUST_TOPICS.push({ topic, questions });
   };
 }
+})();

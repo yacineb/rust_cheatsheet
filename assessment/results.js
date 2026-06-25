@@ -1,3 +1,4 @@
+(function () {
 function marker(pct) {
   if (pct >= 75) return 'strong';
   if (pct >= 50) return 'ok';
@@ -38,9 +39,8 @@ function renderResults(grade, normalized, survey) {
 
   const weak = buildStudyList(grade.byTopic);
 
-  // study links come from the first weak-topic question that carries a studyRef
+  // study links come from the first question per topic that carries a studyRef
   const refByTopic = {};
-  for (const q of normalized) { /* normalized lacks studyRef; pull from survey questions */ }
   survey.getAllQuestions().forEach((qq) => {
     if (qq.studyRef && !refByTopic[qq.topic]) refByTopic[qq.topic] = qq.studyRef;
   });
@@ -81,3 +81,4 @@ if (typeof window !== 'undefined') {
   window.renderResults = renderResults;
   window.ResultsHelpers = api;
 }
+})();
