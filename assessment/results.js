@@ -94,6 +94,14 @@ function renderResults(grade, normalized, survey) {
 
   el.hidden = false;
 
+  // Syntax-highlight any code blocks in the results (review rows carry q.title HTML)
+  if (window.Prism) {
+    el.querySelectorAll('pre code').forEach((c) => {
+      if (!c.className) c.className = 'language-rust';
+      window.Prism.highlightElement(c);
+    });
+  }
+
   const reviewSection = el.querySelector('.review-block');
   const toggleBtn = el.querySelector('.review-toggle');
   toggleBtn.addEventListener('click', () => {

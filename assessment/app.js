@@ -19,6 +19,30 @@ function initAssessment() {
   const survey = new window.Survey.Model(json);
   survey.showCompletedPage = false;
 
+  // Allow raw HTML in question titles (SurveyJS markdown hook)
+  survey.onTextMarkdown.add((sender, options) => { options.html = options.text; });
+
+  // DOM-level fallback: if SurveyJS escaped HTML in the title, fix it directly
+  survey.onAfterRenderQuestion.add((sender, options) => {
+    const raw = options.question.title;
+    if (!raw || !/<[a-z]/i.test(raw)) return;
+    // Try common SurveyJS title span selectors across versions
+    const titleSpan =
+      options.htmlElement.querySelector('.sd-element__title .sv-string-viewer') ||
+      options.htmlElement.querySelector('.sv-title .sv-string-viewer') ||
+      options.htmlElement.querySelector('h5 .sv-string-viewer');
+    if (titleSpan && titleSpan.innerHTML.trim() !== raw.trim()) {
+      titleSpan.innerHTML = raw;
+    }
+    // Syntax-highlight code blocks that landed inside this question
+    if (window.Prism) {
+      options.htmlElement.querySelectorAll('pre code').forEach((el) => {
+        if (!el.className) el.className = 'language-rust';
+        window.Prism.highlightElement(el);
+      });
+    }
+  });
+
   // restore saved progress
   const saved = localStorage.getItem(STORAGE_KEY);
   if (saved) {

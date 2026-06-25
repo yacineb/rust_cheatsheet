@@ -25,7 +25,7 @@ function toElement(q) {
   const isMulti = q.type === 'multi';
   let title = q.title;
   if (q.type === 'code' && q.code) {
-    title = `${q.title}<pre><code>${escapeHtml(q.code)}</code></pre>`;
+    title = `${q.title}<pre><code class="language-rust">${escapeHtml(q.code)}</code></pre>`;
   }
   const choices = q.type === 'boolean' ? ['True', 'False'] : q.choices;
   return {

@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Rust Knowledge Assessment</title>
     <link href="https://unpkg.com/survey-core/survey-core.min.css" rel="stylesheet" />
+    <link href="https://unpkg.com/prismjs@1/themes/prism-tomorrow.css" rel="stylesheet" />
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
@@ -43,6 +44,10 @@
 
     <script src="results.js"></script>
     <script src="app.js"></script>
+    <!-- Prism: manual=true prevents auto-run before SurveyJS renders -->
+    <script>window.Prism = window.Prism || {}; window.Prism.manual = true;</script>
+    <script src="https://unpkg.com/prismjs@1/prism.js"></script>
+    <script src="https://unpkg.com/prismjs@1/components/prism-rust.min.js"></script>
     <script>
       window.addEventListener('DOMContentLoaded', () => window.initAssessment());
     </script>
