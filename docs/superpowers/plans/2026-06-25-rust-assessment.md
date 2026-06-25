@@ -985,6 +985,53 @@ git commit -m "docs(assessment): add project README"
 
 ---
 
+### Task 8: "Review answers" view in results
+
+**Files:**
+- Modify: `assessment/results.js` (add `formatAnswer`; extend `renderResults` with a collapsible review section + toggle button)
+- Modify: `assessment/results.test.js` (tests for `formatAnswer`)
+- Modify: `assessment/styles.css` (review-row styling)
+
+**Interfaces:**
+- Consumes: `grade`, `normalized` (`{name,topic,difficulty,type,correct}`), `survey` (its `getAllQuestions()` and `data`), and `window.Scoring.isCorrect`.
+- Produces: `formatAnswer(type, val)` → display string; added to `window.ResultsHelpers` and `module.exports`.
+
+`formatAnswer(type, val)` rules:
+- `undefined`/`null` → `'(skipped)'`
+- array → `val.length ? val.join(', ') : '(skipped)'`
+- otherwise → `String(val)`
+
+`renderResults` additions (everything stays inside the existing IIFE):
+- Build a `name → normalized` map.
+- Iterate `survey.getAllQuestions()` (survey order). For each `q`: `meta = normMap[q.name]`; `given = survey.data[q.name]`; `ok = window.Scoring.isCorrect(meta, given)`.
+- Render a `<section class="results-block review-block" hidden>` of rows:
+  `<div class="review-row ${ok ? 'ok' : 'bad'}"><div class="review-q">${q.title}</div><div class="review-ans">Your answer: ${formatAnswer(meta.type, given)} ${ok ? '✅' : '❌'}</div><div class="review-ans">Correct: ${formatAnswer(meta.type, meta.correct)}</div></div>`
+  (`q.title` already contains the question's HTML, including code snippets — inject as-is, author content.)
+- Insert a `<button class="review-toggle">Review answers ▼</button>` immediately before the Retake button.
+- After setting `innerHTML`/un-hiding, wire the toggle: clicking flips the review section's `hidden` and updates the label between `Review answers ▼` and `Hide answers ▲`.
+
+- [ ] **Step 1: Write the failing test** — add to `assessment/results.test.js`:
+
+```js
+test('formatAnswer formats skipped, arrays, and scalars', () => {
+  const { formatAnswer } = require('./results.js');
+  assert.strictEqual(formatAnswer('single', undefined), '(skipped)');
+  assert.strictEqual(formatAnswer('boolean', null), '(skipped)');
+  assert.strictEqual(formatAnswer('multi', []), '(skipped)');
+  assert.strictEqual(formatAnswer('multi', ['a', 'c']), 'a, c');
+  assert.strictEqual(formatAnswer('single', 'b'), 'b');
+});
+```
+
+- [ ] **Step 2: Run it, confirm it fails** (`formatAnswer` not exported): `node --test assessment/results.test.js`
+- [ ] **Step 3: Implement** `formatAnswer`, export it, and extend `renderResults` + add CSS (`.review-block`, `.review-row.ok`, `.review-row.bad`, `.review-q`, `.review-ans`, `button.review-toggle`).
+- [ ] **Step 4: Run tests** (`node --test assessment/`) — all green.
+- [ ] **Step 5: Commit.**
+
+Browser verification (controller, headless Chrome): completing a run shows a "Review answers" toggle that reveals per-question rows (title, given answer with ✅/❌, correct answer) and hides them again.
+
+---
+
 ## Self-Review Notes
 
 - **Spec coverage:** static page (T3), SurveyJS lib (T2/T3), 14 topics ×10 (T6), topic+difficulty custom props (T2/T3), 4 formats (T2/T6), all-or-nothing multi + skipped=wrong (T1), per-topic/per-difficulty + level with Expert guard (T1), results panel with strengths/weaknesses + study links + retake + localStorage (T3/T4), file structure & testing (all). Email explicitly out of scope. ✓
