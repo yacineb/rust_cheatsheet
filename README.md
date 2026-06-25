@@ -15,6 +15,7 @@ Testing setup:
 
 Clean cargo cache:
 
+- `cargo clean`
 - rm -rf ~/.cargo/.package-cache
 - rm -rf ~/.cargo/registry/index/*
 
@@ -172,7 +173,7 @@ Prefer `NonNull<T>` over *mut T for those reasons:
 - Covariance with T.
 - Clearer intent and type safety.
 - Dereferencing is explicit and can only be done inside an unsafe block.
-- Is Send, Sync if T: Send, T:Sync
+- Is `!Send` and `!Sync` unconditionally (like raw pointers). If you can guarantee it's safe, wrap it in a newtype and `unsafe impl Send/Sync` yourself.
 
 - `UnsafeCell<T>` is the only idiomatic way in rust at the moment, to get a mutable access to a shared reference
 
@@ -207,7 +208,7 @@ Atomics and memory ordering
 - std::sync:Mutex provides:
         - poisoning: if the lock holder panics then the mutex becomes poinsed (any attempt to take the lock will panic)
         - uses system mutex, kernel space
-        - Guarantees fairness: all of the threads have the same chance to take the lock.
+        - Does NOT guarantee fairness: the OS scheduler decides wake order, so a thread can be starved. (No std/parking_lot mutex is fair by default; parking_lot offers opt-in eventual fairness.)
         - The thread is block if waiting of (parked). That causes context-swicth overhead.
         - Does not provide reentrance.
 
