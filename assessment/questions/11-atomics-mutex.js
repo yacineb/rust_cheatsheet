@@ -76,4 +76,19 @@ window.registerTopic('Atomics, Lock-free & Mutex', [
     title: '<code>Ordering::Relaxed</code> is sufficient for an atomic increment that is only read and written by a single thread.',
     correct: true,
     studyRef: { cheats: 'https://cheats.rs/#atomics' } },
+
+  { id: 'atom-fair', difficulty: 'Advanced', type: 'multi',
+    title: 'Why do most high-performance mutexes (including <code>std::sync::Mutex</code>) default to <em>unfair</em> (barging) lock acquisition? (select all that apply)',
+    choices: [
+      'Waking a sleeping thread requires kernel interaction and context switches, which is expensive',
+      'Letting the current thread reacquire immediately preserves CPU cache locality for the data under the lock',
+      'FIFO ordering forces handoffs to threads that may not yet be scheduled, increasing context switches and reducing throughput',
+      'Unfair mutexes guarantee starvation freedom by design',
+    ],
+    correct: [
+      'Waking a sleeping thread requires kernel interaction and context switches, which is expensive',
+      'Letting the current thread reacquire immediately preserves CPU cache locality for the data under the lock',
+      'FIFO ordering forces handoffs to threads that may not yet be scheduled, increasing context switches and reducing throughput',
+    ],
+    studyRef: { readme: '#mutex' } },
 ]);
