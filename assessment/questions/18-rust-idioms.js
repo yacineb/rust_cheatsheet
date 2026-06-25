@@ -1,0 +1,118 @@
+window.registerTopic('Rust Performance & Idioms', [
+  { id: 'idiom-1', difficulty: 'Basic', type: 'single',
+    title: 'Why should functions accept <code>&str</code> instead of <code>&String</code> for read-only string parameters?',
+    choices: [
+      '<code>&str</code> accepts both <code>&String</code> (via Deref coercion) and string literals without any allocation, making the API more flexible at zero cost',
+      '<code>&String</code> is not thread-safe',
+      '<code>&str</code> has a smaller memory footprint at runtime',
+      'The compiler rejects <code>&String</code> in function parameters since Rust 2021',
+    ],
+    correct: '<code>&str</code> accepts both <code>&String</code> (via Deref coercion) and string literals without any allocation, making the API more flexible at zero cost',
+    studyRef: { cheats: 'https://cheats.rs/#idiomatic-rust' } },
+
+  { id: 'idiom-2', difficulty: 'Basic', type: 'single',
+    title: 'What does the <code>#[inline]</code> attribute on a function tell the compiler?',
+    choices: [
+      'The function must always be inlined; a compile error is emitted if the compiler cannot do so',
+      'The function is a candidate for inlining across crate boundaries; the compiler makes the final decision',
+      'The function runs in the caller\'s thread without pushing a new stack frame at runtime',
+      'The function is exempt from borrow-checking rules',
+    ],
+    correct: 'The function is a candidate for inlining across crate boundaries; the compiler makes the final decision',
+    studyRef: { cheats: 'https://cheats.rs/#performance-tips' } },
+
+  { id: 'idiom-3', difficulty: 'Intermediate', type: 'single',
+    title: 'When is <code>Cow&lt;\'_, str&gt;</code> the right return type instead of always returning a <code>String</code>?',
+    choices: [
+      'When the function sometimes returns the input unchanged (borrowed) and sometimes needs to modify it (owned), avoiding allocation in the common case',
+      'When the string may contain non-UTF-8 bytes',
+      'When the string needs to be shared across threads without <code>Arc</code>',
+      'When the string length is known at compile time',
+    ],
+    correct: 'When the function sometimes returns the input unchanged (borrowed) and sometimes needs to modify it (owned), avoiding allocation in the common case',
+    studyRef: { cheats: 'https://cheats.rs/#idiomatic-rust' } },
+
+  { id: 'idiom-4', difficulty: 'Intermediate', type: 'single',
+    title: 'Why are Rust iterator adapter chains considered zero-cost abstractions?',
+    choices: [
+      'They use CPU SIMD instructions automatically',
+      'The compiler monomorphizes and inlines each adapter, producing code as tight as a hand-written loop with no intermediate allocations',
+      'They skip bounds checks on all slice accesses',
+      'Iterator chains are pre-computed at compile time when the input size is a constant',
+    ],
+    correct: 'The compiler monomorphizes and inlines each adapter, producing code as tight as a hand-written loop with no intermediate allocations',
+    studyRef: { cheats: 'https://cheats.rs/#performance-tips' } },
+
+  { id: 'idiom-5', difficulty: 'Intermediate', type: 'multi',
+    title: 'Which patterns reduce unnecessary heap allocations in Rust? (select all that apply)',
+    choices: [
+      'Accepting <code>&str</code> instead of <code>String</code> for read-only parameters',
+      'Using <code>Vec::with_capacity(n)</code> when the final size is known upfront',
+      'Using <code>Cow&lt;str&gt;</code> to avoid cloning strings that are often unchanged',
+      'Using <code>format!</code> for every intermediate string concatenation',
+      'Writing to a pre-allocated buffer with <code>write!</code> instead of building temporary strings',
+    ],
+    correct: [
+      'Accepting <code>&str</code> instead of <code>String</code> for read-only parameters',
+      'Using <code>Vec::with_capacity(n)</code> when the final size is known upfront',
+      'Using <code>Cow&lt;str&gt;</code> to avoid cloning strings that are often unchanged',
+      'Writing to a pre-allocated buffer with <code>write!</code> instead of building temporary strings',
+    ],
+    studyRef: { cheats: 'https://cheats.rs/#performance-tips' } },
+
+  { id: 'idiom-6', difficulty: 'Advanced', type: 'single',
+    title: 'When should you prefer <code>Arc&lt;T&gt;</code> over cloning <code>T</code> to share data across threads?',
+    choices: [
+      'When <code>T</code> is large or expensive to clone and you need multiple owners — <code>Arc</code> shares one allocation with a reference count instead of copying',
+      'Always — <code>Arc</code> is cheaper than cloning in every situation',
+      'Only when <code>T: Sync</code> and <code>T: Send</code> but not <code>T: Clone</code>',
+      'Only when the data is accessed from more than eight threads simultaneously',
+    ],
+    correct: 'When <code>T</code> is large or expensive to clone and you need multiple owners — <code>Arc</code> shares one allocation with a reference count instead of copying',
+    studyRef: { cheats: 'https://cheats.rs/#performance-tips' } },
+
+  { id: 'idiom-7', difficulty: 'Advanced', type: 'single',
+    title: 'What is "false sharing" and how is it mitigated in concurrent Rust?',
+    choices: [
+      'Two threads writing to different variables that share a CPU cache line, causing repeated cache-line invalidation; mitigated by padding each hot variable to its own cache line (e.g. with <code>#[repr(align(64))]</code>)',
+      'Two threads holding <code>&T</code> references and getting stale reads; mitigated with <code>SeqCst</code> atomics',
+      'A race condition where two threads unsafely alias the same memory',
+      'A deadlock where two tasks each hold a lock the other needs',
+    ],
+    correct: 'Two threads writing to different variables that share a CPU cache line, causing repeated cache-line invalidation; mitigated by padding each hot variable to its own cache line (e.g. with <code>#[repr(align(64))]</code>)',
+    studyRef: { cheats: 'https://cheats.rs/#atomics-cache' } },
+
+  { id: 'idiom-8', difficulty: 'Advanced', type: 'single',
+    title: 'Which is the most efficient way to build a <code>String</code> from many parts in a performance-critical path?',
+    choices: [
+      'Chaining <code>+</code> operators: <code>s = s + part1 + part2</code>',
+      'Calling <code>format!</code> with all parts in one call',
+      'Creating a <code>String::with_capacity(estimated)</code> then using <code>push_str</code> for each part — one allocation, no reallocation',
+      'Collecting from an iterator of <code>&str</code> with <code>.collect::&lt;String&gt;()</code>',
+    ],
+    correct: 'Creating a <code>String::with_capacity(estimated)</code> then using <code>push_str</code> for each part — one allocation, no reallocation',
+    studyRef: { cheats: 'https://cheats.rs/#performance-tips' } },
+
+  { id: 'idiom-9', difficulty: 'Expert', type: 'code',
+    title: 'What does this code demonstrate about iterator performance?',
+    code: 'let sum: u64 = (0u64..1_000_000)\n    .filter(|x| x % 2 == 0)\n    .map(|x| x * x)\n    .sum();',
+    choices: [
+      'This allocates a temporary Vec of filtered values before squaring and summing',
+      'The iterator chain is fused and compiled to a single tight loop with no intermediate heap allocation — equivalent to a hand-written loop',
+      'This is slower than a for loop because filter() and map() have virtual dispatch overhead',
+      'The compiler unrolls this into a SIMD vectorized loop automatically',
+    ],
+    correct: 'The iterator chain is fused and compiled to a single tight loop with no intermediate heap allocation — equivalent to a hand-written loop',
+    studyRef: { cheats: 'https://cheats.rs/#performance-tips' } },
+
+  { id: 'idiom-10', difficulty: 'Expert', type: 'single',
+    title: 'When should a function return <code>impl Iterator&lt;Item = T&gt;</code> instead of collecting into a <code>Vec&lt;T&gt;</code>?',
+    choices: [
+      'Only when the iterator is infinite',
+      'When callers may not consume all values or may short-circuit early — returning an iterator defers allocation and computation until the caller needs each element',
+      'Only when <code>T: Copy</code>',
+      'Only as a public API in libraries; binary crates should always collect',
+    ],
+    correct: 'When callers may not consume all values or may short-circuit early — returning an iterator defers allocation and computation until the caller needs each element',
+    studyRef: { cheats: 'https://cheats.rs/#performance-tips' } },
+]);

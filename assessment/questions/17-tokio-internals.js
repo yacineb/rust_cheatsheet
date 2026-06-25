@@ -1,0 +1,116 @@
+window.registerTopic('Tokio Internals & Async Patterns', [
+  { id: 'tokio-1', difficulty: 'Basic', type: 'single',
+    title: 'When should you use <code>std::sync::Mutex</code> inside async code instead of <code>tokio::sync::Mutex</code>?',
+    choices: [
+      'Never — <code>tokio::sync::Mutex</code> is always correct inside async code',
+      'When the lock guard is not held across any <code>.await</code> point — <code>std::sync::Mutex</code> is cheaper for short critical sections',
+      'Only when the value inside does not implement <code>Send</code>',
+      'When you need reentrant locking',
+    ],
+    correct: 'When the lock guard is not held across any <code>.await</code> point — <code>std::sync::Mutex</code> is cheaper for short critical sections',
+    studyRef: { cheats: 'https://cheats.rs/#async-await-101' } },
+
+  { id: 'tokio-2', difficulty: 'Basic', type: 'single',
+    title: 'What does it mean for a future to be "cancellation-safe" in Tokio?',
+    choices: [
+      'The future always completes before the runtime shuts down',
+      'The future can be dropped at any <code>.await</code> point without losing data or leaving shared state inconsistent',
+      'The future does not allocate memory on the heap',
+      'The future implements <code>Unpin</code>',
+    ],
+    correct: 'The future can be dropped at any <code>.await</code> point without losing data or leaving shared state inconsistent',
+    studyRef: { cheats: 'https://cheats.rs/#async-await-101' } },
+
+  { id: 'tokio-3', difficulty: 'Intermediate', type: 'multi',
+    title: 'Which of the following correctly matches <code>tokio::sync</code> channel types to their use cases? (select all that apply)',
+    choices: [
+      '<code>oneshot</code>: single value, single sender, single receiver — ideal for request/response patterns',
+      '<code>broadcast</code>: multiple receivers each see every message — ideal for event fanout',
+      '<code>watch</code>: receivers see only the latest value — ideal for config or state updates',
+      '<code>mpsc</code>: multiple consumers each receive a distinct subset of messages — ideal for work stealing',
+    ],
+    correct: [
+      '<code>oneshot</code>: single value, single sender, single receiver — ideal for request/response patterns',
+      '<code>broadcast</code>: multiple receivers each see every message — ideal for event fanout',
+      '<code>watch</code>: receivers see only the latest value — ideal for config or state updates',
+    ],
+    studyRef: { cheats: 'https://cheats.rs/#async-await-101' } },
+
+  { id: 'tokio-4', difficulty: 'Intermediate', type: 'single',
+    title: 'Why should <code>std::sync::Condvar</code> be avoided in async Tokio code, and what is the async alternative?',
+    choices: [
+      'Waiting on a <code>Condvar</code> blocks the OS thread, stalling the Tokio executor; use <code>tokio::sync::Notify</code> instead',
+      '<code>Condvar</code> requires <code>unsafe</code> code; use <code>tokio::sync::Mutex</code> instead',
+      '<code>Condvar</code> is not available in Rust\'s standard library on async-aware targets',
+      '<code>Condvar</code> has a race condition on all platforms; use <code>tokio::sync::watch</code> instead',
+    ],
+    correct: 'Waiting on a <code>Condvar</code> blocks the OS thread, stalling the Tokio executor; use <code>tokio::sync::Notify</code> instead',
+    studyRef: { cheats: 'https://cheats.rs/#async-await-101' } },
+
+  { id: 'tokio-5', difficulty: 'Intermediate', type: 'single',
+    title: 'When should you prefer <code>tokio::sync::RwLock</code> over <code>tokio::sync::Mutex</code>?',
+    choices: [
+      'When reads significantly outnumber writes, so multiple tasks can hold the read lock concurrently',
+      'Always — <code>RwLock</code> has lower overhead than <code>Mutex</code> in all cases',
+      'Only when the protected data implements <code>Clone</code>',
+      'When you need reentrant locking within the same task',
+    ],
+    correct: 'When reads significantly outnumber writes, so multiple tasks can hold the read lock concurrently',
+    studyRef: { cheats: 'https://cheats.rs/#async-await-101' } },
+
+  { id: 'tokio-6', difficulty: 'Advanced', type: 'single',
+    title: 'Why is <code>tokio::io::AsyncReadExt::read_exact()</code> not cancellation-safe, while <code>tokio::sync::mpsc::Receiver::recv()</code> is?',
+    choices: [
+      '<code>read_exact</code> may have partially read bytes from the OS into an internal buffer; if dropped those bytes are lost. <code>recv()</code> leaves the message in the channel if cancelled before completion.',
+      '<code>read_exact</code> uses blocking I/O internally; <code>recv()</code> uses purely async I/O.',
+      '<code>read_exact</code> holds a mutex during the read; <code>recv()</code> does not.',
+      'Both are equally cancellation-safe; the distinction does not exist in Tokio.',
+    ],
+    correct: '<code>read_exact</code> may have partially read bytes from the OS into an internal buffer; if dropped those bytes are lost. <code>recv()</code> leaves the message in the channel if cancelled before completion.',
+    studyRef: { cheats: 'https://cheats.rs/#async-await-101' } },
+
+  { id: 'tokio-7', difficulty: 'Advanced', type: 'single',
+    title: 'What are the consequences of holding a <code>std::sync::MutexGuard</code> across an <code>.await</code> point?',
+    choices: [
+      'The future becomes <code>!Send</code> (cannot be spawned on a multi-thread runtime) and the mutex stays locked while the task is suspended, potentially starving other threads or tasks waiting for the lock',
+      'The compiler always rejects it at compile time',
+      'The guard is automatically released at the <code>.await</code> point and reacquired after resumption',
+      'It compiles and runs correctly; the only downside is a small runtime overhead',
+    ],
+    correct: 'The future becomes <code>!Send</code> (cannot be spawned on a multi-thread runtime) and the mutex stays locked while the task is suspended, potentially starving other threads or tasks waiting for the lock',
+    studyRef: { cheats: 'https://cheats.rs/#async-await-101' } },
+
+  { id: 'tokio-8', difficulty: 'Advanced', type: 'single',
+    title: 'What is the key practical difference between <code>tokio::sync::mpsc::channel(n)</code> (bounded) and <code>tokio::sync::mpsc::unbounded_channel()</code>?',
+    choices: [
+      'Bounded channels apply backpressure: <code>send().await</code> suspends the sender when the buffer is full, preventing unbounded memory growth; unbounded channels never suspend the sender',
+      'Unbounded channels are only safe on single-threaded runtimes',
+      'Bounded channels are faster in all cases regardless of load',
+      'Unbounded channels cap at the number of CPU cores',
+    ],
+    correct: 'Bounded channels apply backpressure: <code>send().await</code> suspends the sender when the buffer is full, preventing unbounded memory growth; unbounded channels never suspend the sender',
+    studyRef: { cheats: 'https://cheats.rs/#async-await-101' } },
+
+  { id: 'tokio-9', difficulty: 'Expert', type: 'single',
+    title: 'Which describes when to reach for <code>tokio</code>, <code>crossbeam</code>, or <code>flume</code> channels?',
+    choices: [
+      'Tokio channels for async tasks (integrate with the async executor); crossbeam for synchronous MPMC in CPU-bound threads; flume for a unified async+sync API usable in both contexts without an executor dependency',
+      'Tokio channels everywhere; crossbeam and flume are legacy crates with no modern use case',
+      'Crossbeam is always the fastest; prefer it even in async code by spawning blocking tasks',
+      'All three have identical semantics and performance; the choice is purely stylistic',
+    ],
+    correct: 'Tokio channels for async tasks (integrate with the async executor); crossbeam for synchronous MPMC in CPU-bound threads; flume for a unified async+sync API usable in both contexts without an executor dependency',
+    studyRef: { cheats: 'https://cheats.rs/#async-await-101' } },
+
+  { id: 'tokio-10', difficulty: 'Expert', type: 'code',
+    title: 'When the <code>sleep</code> branch wins in <code>select!</code>, what happens to <code>stream</code> and its underlying TCP connection?',
+    code: 'async fn handle(mut stream: TcpStream) {\n    let mut buf = vec![0u8; 1024];\n    tokio::select! {\n        _ = stream.read(&mut buf) => { /* process */ }\n        _ = tokio::time::sleep(Duration::from_secs(5)) => {\n            println!("timeout");\n        }\n    }\n} // <-- here',
+    choices: [
+      'stream leaks — Tokio does not drop resources from cancelled select branches',
+      'stream is dropped at the closing brace, running its Drop impl which closes the TCP connection',
+      'stream remains open until the runtime shuts down',
+      'The read future is cancelled but stream stays open for re-use outside the function',
+    ],
+    correct: 'stream is dropped at the closing brace, running its Drop impl which closes the TCP connection',
+    studyRef: { cheats: 'https://cheats.rs/#async-await-101' } },
+]);
