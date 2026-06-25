@@ -113,4 +113,59 @@ window.registerTopic('Tokio Internals & Async Patterns', [
     ],
     correct: 'stream is dropped at the closing brace, running its Drop impl which closes the TCP connection',
     studyRef: { cheats: 'https://cheats.rs/#async-await-101' } },
+
+  { id: 'tokio-11', difficulty: 'Basic', type: 'single',
+    title: 'When should you use <code>tokio::task::spawn_blocking</code> instead of <code>tokio::spawn</code>?',
+    choices: [
+      'For lightweight async I/O tasks that resolve quickly',
+      'For blocking or CPU-intensive synchronous code that would otherwise stall the async executor\'s worker threads',
+      'For tasks that must run on the main thread',
+      'For tasks that need to share state with the OS scheduler',
+    ],
+    correct: 'For blocking or CPU-intensive synchronous code that would otherwise stall the async executor\'s worker threads',
+    studyRef: { cheats: 'https://cheats.rs/#async-await-101' } },
+
+  { id: 'tokio-12', difficulty: 'Intermediate', type: 'single',
+    title: 'What does <code>tokio::task::yield_now().await</code> do?',
+    choices: [
+      'Puts the OS thread to sleep for one scheduler quantum',
+      'Suspends the current task and places it back on the run queue, letting other ready tasks on this thread execute before resuming',
+      'Cancels the current task',
+      'Flushes all pending I/O operations before continuing',
+    ],
+    correct: 'Suspends the current task and places it back on the run queue, letting other ready tasks on this thread execute before resuming',
+    studyRef: { cheats: 'https://cheats.rs/#async-await-101' } },
+
+  { id: 'tokio-13', difficulty: 'Intermediate', type: 'single',
+    title: 'What is <code>tokio::sync::Semaphore</code> primarily used for?',
+    choices: [
+      'As a drop-in replacement for <code>Mutex</code> when only one task needs access',
+      'Limiting the number of tasks that can proceed concurrently — e.g. capping simultaneous DB connections or in-flight HTTP requests',
+      'Broadcasting a one-shot signal to all waiting tasks simultaneously',
+      'Ensuring tasks acquire resources in strict FIFO order',
+    ],
+    correct: 'Limiting the number of tasks that can proceed concurrently — e.g. capping simultaneous DB connections or in-flight HTTP requests',
+    studyRef: { cheats: 'https://cheats.rs/#async-await-101' } },
+
+  { id: 'tokio-14', difficulty: 'Advanced', type: 'single',
+    title: 'Why does an async recursive function require <code>Box::pin</code> (or equivalent)?',
+    choices: [
+      'Because the generated state machine contains itself, giving it infinite size at compile time; wrapping in <code>Box</code> makes the recursive reference a fixed-size pointer',
+      'Because Tokio\'s executor requires all futures to be pinned before scheduling them',
+      'Because async functions cannot close over themselves without an explicit allocation',
+      'Because <code>Box::pin</code> adds a vtable entry needed for the recursive dispatch',
+    ],
+    correct: 'Because the generated state machine contains itself, giving it infinite size at compile time; wrapping in <code>Box</code> makes the recursive reference a fixed-size pointer',
+    studyRef: { cheats: 'https://cheats.rs/#async-await-101' } },
+
+  { id: 'tokio-15', difficulty: 'Advanced', type: 'single',
+    title: 'When should you prefer <code>Builder::new_current_thread()</code> over the default multi-thread Tokio runtime?',
+    choices: [
+      'For CPU-bound programs with many parallel compute tasks that benefit from work-stealing across cores',
+      'For I/O-bound tools, tests, or CLIs where simplicity matters and you want a single-threaded event loop without work-stealing overhead',
+      'Whenever you use <code>spawn_blocking</code>, which requires the current-thread runtime',
+      'When the program handles more than 10 000 concurrent connections',
+    ],
+    correct: 'For I/O-bound tools, tests, or CLIs where simplicity matters and you want a single-threaded event loop without work-stealing overhead',
+    studyRef: { cheats: 'https://cheats.rs/#async-await-101' } },
 ]);

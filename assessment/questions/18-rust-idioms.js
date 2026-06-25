@@ -115,4 +115,59 @@ window.registerTopic('Rust Performance & Idioms', [
     ],
     correct: 'When callers may not consume all values or may short-circuit early — returning an iterator defers allocation and computation until the caller needs each element',
     studyRef: { cheats: 'https://cheats.rs/#performance-tips' } },
+
+  { id: 'idiom-11', difficulty: 'Basic', type: 'single',
+    title: 'What is the performance advantage of <code>map.entry(key).or_insert(val)</code> over <code>if !map.contains_key(&key) { map.insert(key, val); }</code>?',
+    choices: [
+      '<code>entry()</code> inserts in O(1); <code>contains_key</code> + <code>insert</code> is O(n)',
+      '<code>entry()</code> hashes the key once; <code>contains_key</code> + <code>insert</code> hashes it twice',
+      '<code>entry()</code> avoids a borrow-checker error that the two-step form would produce',
+      'There is no performance difference; <code>entry()</code> is only a style preference',
+    ],
+    correct: '<code>entry()</code> hashes the key once; <code>contains_key</code> + <code>insert</code> hashes it twice',
+    studyRef: { cheats: 'https://cheats.rs/#performance-tips' } },
+
+  { id: 'idiom-12', difficulty: 'Intermediate', type: 'single',
+    title: 'What does <code>#[cold]</code> on a function tell the compiler?',
+    choices: [
+      'The function is rarely called; the compiler marks its code as cold in the instruction cache and may optimize it for size rather than speed, improving hot-path layout',
+      'The function runs on a dedicated low-priority background thread',
+      'The function can never be inlined regardless of other attributes',
+      'The function executes only during the cold startup phase before <code>main</code>',
+    ],
+    correct: 'The function is rarely called; the compiler marks its code as cold in the instruction cache and may optimize it for size rather than speed, improving hot-path layout',
+    studyRef: { cheats: 'https://cheats.rs/#performance-tips' } },
+
+  { id: 'idiom-13', difficulty: 'Advanced', type: 'single',
+    title: 'When does <code>dyn Trait</code> dynamic dispatch have a measurable cost compared to a generic <code>impl Trait</code> or <code>T: Trait</code> bound?',
+    choices: [
+      'Always — dynamic dispatch is always slower than static dispatch',
+      'When the virtual call is in a tight inner loop and prevents inlining of a small callee, making the vtable indirection and lost optimisation opportunity significant',
+      'Only when the trait object is heap-allocated behind a <code>Box</code>',
+      'Only on platforms that lack hardware branch-prediction',
+    ],
+    correct: 'When the virtual call is in a tight inner loop and prevents inlining of a small callee, making the vtable indirection and lost optimisation opportunity significant',
+    studyRef: { cheats: 'https://cheats.rs/#performance-tips' } },
+
+  { id: 'idiom-14', difficulty: 'Advanced', type: 'single',
+    title: 'What is "monomorphization bloat" and how is it typically mitigated?',
+    choices: [
+      'The compiler emits a separate copy of a generic function for every concrete type it is called with, increasing binary size; mitigated by extracting the type-erased core into a non-generic helper and keeping only a thin generic wrapper',
+      'Generics slow down compile times but never affect binary size',
+      'The compiler fails to optimise generic functions called with more than 16 distinct types',
+      'Monomorphization bloat only affects functions with lifetime parameters, not type parameters',
+    ],
+    correct: 'The compiler emits a separate copy of a generic function for every concrete type it is called with, increasing binary size; mitigated by extracting the type-erased core into a non-generic helper and keeping only a thin generic wrapper',
+    studyRef: { cheats: 'https://cheats.rs/#performance-tips' } },
+
+  { id: 'idiom-15', difficulty: 'Expert', type: 'single',
+    title: 'How can you help the Rust compiler eliminate repeated bounds checks on slice accesses inside a loop without writing <code>unsafe</code>?',
+    choices: [
+      'Annotate the loop with <code>#[no_bounds_check]</code>',
+      'Assert or check the index range once before the loop — the compiler can propagate the proof and omit per-element checks inside the loop body',
+      'Bounds checks in safe Rust can never be eliminated; use raw pointers via FFI',
+      'Compile with <code>-C overflow-checks=off</code> to disable all checks globally',
+    ],
+    correct: 'Assert or check the index range once before the loop — the compiler can propagate the proof and omit per-element checks inside the loop body',
+    studyRef: { cheats: 'https://cheats.rs/#performance-tips' } },
 ]);

@@ -94,4 +94,49 @@ window.registerTopic('Macros, Closures & API Design', [
     ],
     correct: 'A single token or a balanced group of tokens enclosed by <code>()</code>, <code>[]</code>, or <code>{}</code>',
     studyRef: { cheats: 'https://cheats.rs/#macros-attributes' } },
+
+  { id: 'macapi-11', difficulty: 'Intermediate', type: 'single',
+    title: 'What is "macro hygiene" in Rust\'s <code>macro_rules!</code> system?',
+    choices: [
+      'Identifiers introduced inside a macro expansion do not leak into the caller\'s scope, and caller identifiers do not shadow macro-internal ones, preventing accidental name collisions',
+      'A lint that checks macro expansions for undefined behaviour before compilation',
+      'The requirement that all macro arms produce syntactically valid Rust tokens',
+      'The ability to nest one macro inside another without infinite recursion',
+    ],
+    correct: 'Identifiers introduced inside a macro expansion do not leak into the caller\'s scope, and caller identifiers do not shadow macro-internal ones, preventing accidental name collisions',
+    studyRef: { cheats: 'https://cheats.rs/#macros-attributes' } },
+
+  { id: 'macapi-12', difficulty: 'Intermediate', type: 'single',
+    title: 'What is the purpose of the <code>$crate</code> metavariable inside a <code>macro_rules!</code> macro that is exported from a library?',
+    choices: [
+      'It refers to the crate that invokes the macro, enabling access to caller-private items',
+      'It resolves to the crate where the macro is defined, so paths inside the expansion remain correct regardless of which crate calls the macro',
+      'It expands to the crate name as a string literal for logging',
+      'It is the module path of the file in which the macro is defined',
+    ],
+    correct: 'It resolves to the crate where the macro is defined, so paths inside the expansion remain correct regardless of which crate calls the macro',
+    studyRef: { cheats: 'https://cheats.rs/#macros-attributes' } },
+
+  { id: 'macapi-13', difficulty: 'Advanced', type: 'single',
+    title: 'When should you write a procedural macro instead of a declarative <code>macro_rules!</code> macro?',
+    choices: [
+      'When the macro takes more than three arguments',
+      'When the macro must inspect or generate code based on the structure of a type — e.g. its field names, types, or attributes — which token-pattern matching alone cannot express',
+      'When the macro needs to run after linking rather than at compile time',
+      'Procedural macros are always preferred; <code>macro_rules!</code> is a legacy system',
+    ],
+    correct: 'When the macro must inspect or generate code based on the structure of a type — e.g. its field names, types, or attributes — which token-pattern matching alone cannot express',
+    studyRef: { cheats: 'https://cheats.rs/#macros-attributes' } },
+
+  { id: 'macapi-14', difficulty: 'Expert', type: 'code',
+    title: 'What does this macro expand to and print when called as <code>println!("{}", sum!(1, 2, 3))</code>?',
+    code: 'macro_rules! sum {\n    ($($x:expr),*) => {\n        0 $(+ $x)*\n    };\n}',
+    choices: [
+      'Compile error: repetition cannot start with a literal <code>0</code>',
+      '<code>6</code> — expands to <code>0 + 1 + 2 + 3</code>',
+      '<code>0</code> — the repetition only captures the last element',
+      'A <code>Vec</code> containing <code>[1, 2, 3]</code>',
+    ],
+    correct: '<code>6</code> — expands to <code>0 + 1 + 2 + 3</code>',
+    studyRef: { cheats: 'https://cheats.rs/#macros-attributes' } },
 ]);
