@@ -44,7 +44,6 @@ window.registerTopic('Atomics, Lock-free & Mutex', [
     correct: [
       'It uses a system (kernel-space) mutex',
       'It poisons when the lock holder panics',
-      'It guarantees fairness across waiting threads',
     ],
     studyRef: { readme: '#mutex' } },
   { id: 'atom-7', difficulty: 'Advanced', type: 'single',

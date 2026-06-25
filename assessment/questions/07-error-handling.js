@@ -25,15 +25,14 @@ window.registerTopic('Error handling', [
   { id: 'err-5', difficulty: 'Intermediate', type: 'multi',
     title: 'Which of the following correctly return early with an error using the <code>?</code> operator? (select all that apply)',
     choices: [
-      'fn f() -> Result<i32, String> { let x = "hi".parse::<i32>()?; Ok(x) }',
+      'fn f() -> Result<i32, String> { let x = "hi".parse::<i32>().map_err(|e| e.to_string())?; Ok(x) }',
       'fn f() -> Option<i32> { let x = Some(1)?; Some(x) }',
       'fn f() -> i32 { let x = "hi".parse::<i32>()?; x }',
-      'fn f() -> Result<(), ()> { Err(())?; Ok(()) }',
+      'fn f() -> Result<i32, String> { let x = "hi".parse::<i32>()?; Ok(x) }',
     ],
     correct: [
-      'fn f() -> Result<i32, String> { let x = "hi".parse::<i32>()?; Ok(x) }',
+      'fn f() -> Result<i32, String> { let x = "hi".parse::<i32>().map_err(|e| e.to_string())?; Ok(x) }',
       'fn f() -> Option<i32> { let x = Some(1)?; Some(x) }',
-      'fn f() -> Result<(), ()> { Err(())?; Ok(()) }',
     ],
     studyRef: { cheats: 'https://cheats.rs/#error-custom' } },
   { id: 'err-6', difficulty: 'Intermediate', type: 'code',
