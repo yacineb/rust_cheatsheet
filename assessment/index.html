@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Rust Knowledge Assessment</title>
+    <link href="https://unpkg.com/survey-core/survey-core.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="app-header">
+      <h1>🦀 Rust Knowledge Assessment</h1>
+      <p>Basic → Expert. ~140 questions across 14 topics.</p>
+    </header>
+    <main>
+      <div id="surveyContainer"></div>
+      <div id="resultsContainer" hidden></div>
+    </main>
+
+    <!-- SurveyJS vanilla bundle -->
+    <script src="https://unpkg.com/survey-core/survey.core.min.js"></script>
+    <script src="https://unpkg.com/survey-js-ui/survey-js-ui.min.js"></script>
+
+    <!-- App logic -->
+    <script src="scoring.js"></script>
+    <script src="questions.js"></script>
+
+    <!-- Question bank (one file per topic) -->
+    <script src="questions/01-basics.js"></script>
+    <script src="questions/02-ownership.js"></script>
+    <script src="questions/03-copy-clone-drop.js"></script>
+    <script src="questions/04-lifetimes.js"></script>
+    <script src="questions/05-traits-generics.js"></script>
+    <script src="questions/06-smart-pointers.js"></script>
+    <script src="questions/07-error-handling.js"></script>
+    <script src="questions/08-iterators.js"></script>
+    <script src="questions/09-concurrency.js"></script>
+    <script src="questions/10-async.js"></script>
+    <script src="questions/11-atomics-mutex.js"></script>
+    <script src="questions/12-unsafe-zst.js"></script>
+    <script src="questions/13-performance.js"></script>
+    <script src="questions/14-tooling.js"></script>
+
+    <script src="results.js"></script>
+    <script src="app.js"></script>
+    <script>
+      window.addEventListener('DOMContentLoaded', () => window.initAssessment());
+    </script>
+  </body>
+</html>

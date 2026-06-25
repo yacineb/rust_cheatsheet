@@ -1,0 +1,29 @@
+:root { --bg: #0f1115; --fg: #e6e6e6; --accent: #ce4a1f; --ok: #2ecc71; --warn: #f1c40f; --bad: #e74c3c; }
+* { box-sizing: border-box; }
+body { margin: 0; font-family: system-ui, sans-serif; background: var(--bg); color: var(--fg); }
+.app-header { padding: 1.5rem; text-align: center; border-bottom: 1px solid #222; }
+.app-header h1 { margin: 0 0 .25rem; }
+main { max-width: 860px; margin: 0 auto; padding: 1.5rem; }
+pre { background: #1b1e24; padding: .75rem; border-radius: 6px; overflow-x: auto; }
+code { font-family: ui-monospace, monospace; }
+.results-headline { text-align: center; margin-bottom: 1.5rem; }
+.results-headline .level { font-size: 2rem; color: var(--accent); }
+.bar-row { display: flex; align-items: center; gap: .5rem; margin: .35rem 0; }
+.bar-row .label { width: 230px; font-size: .9rem; }
+.bar-track { flex: 1; background: #1b1e24; border-radius: 4px; height: 14px; overflow: hidden; }
+.bar-fill { height: 100%; }
+.bar-fill.strong { background: var(--ok); }
+.bar-fill.ok { background: var(--warn); }
+.bar-fill.weak { background: var(--bad); }
+.bar-row .pct { width: 48px; text-align: right; font-variant-numeric: tabular-nums; }
+.study-links a { color: var(--accent); margin-right: .75rem; }
+button.retake { margin-top: 1.5rem; padding: .6rem 1.2rem; background: var(--accent); color: #fff; border: 0; border-radius: 6px; cursor: pointer; }
+section.results-block { margin: 1.5rem 0; }
+section.results-block h2 { border-bottom: 1px solid #222; padding-bottom: .3rem; }
+section.review-block { padding: .5rem 0; }
+.review-row { padding: .75rem; margin: .5rem 0; border-radius: 6px; border-left: 4px solid; }
+.review-row.ok { border-color: var(--ok); background: rgba(46,204,113,.08); }
+.review-row.bad { border-color: var(--bad); background: rgba(231,76,60,.08); }
+.review-q { font-weight: 600; margin-bottom: .4rem; }
+.review-ans { font-size: .9rem; color: #bbb; margin-top: .2rem; }
+button.review-toggle { margin-top: 1rem; margin-right: .75rem; padding: .5rem 1rem; background: transparent; color: var(--accent); border: 1px solid var(--accent); border-radius: 6px; cursor: pointer; font-size: .95rem; }
