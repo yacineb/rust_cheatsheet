@@ -19,6 +19,12 @@ function barRow(label, pct) {
     `<span class="pct">${pct}%</span></div>`;
 }
 
+function formatAnswer(type, val) {
+  if (val === undefined || val === null) return '(skipped)';
+  if (Array.isArray(val)) return val.length ? val.join(', ') : '(skipped)';
+  return String(val);
+}
+
 function renderResults(grade, normalized, survey) {
   const el = document.getElementById('resultsContainer');
   const difficultyOrder = ['Basic', 'Intermediate', 'Advanced', 'Expert'];
@@ -54,6 +60,23 @@ function renderResults(grade, normalized, survey) {
     return `<span class="study-links">${parts.join('')}</span>`;
   }
 
+  // Build name → normalized map for quick lookup
+  const normMap = {};
+  normalized.forEach((n) => { normMap[n.name] = n; });
+
+  // Build review rows in survey order
+  const reviewRows = survey.getAllQuestions().map((q) => {
+    const meta = normMap[q.name];
+    if (!meta) return '';
+    const given = survey.data[q.name];
+    const ok = window.Scoring.isCorrect(meta, given);
+    return `<div class="review-row ${ok ? 'ok' : 'bad'}">` +
+      `<div class="review-q">${q.title}</div>` +
+      `<div class="review-ans">Your answer: ${formatAnswer(meta.type, given)} ${ok ? '✅' : '❌'}</div>` +
+      `<div class="review-ans">Correct: ${formatAnswer(meta.type, meta.correct)}</div>` +
+      `</div>`;
+  }).join('');
+
   el.innerHTML =
     `<div class="results-headline"><div class="level">${grade.level}</div>` +
     `<div>Overall score: <strong>${grade.overallPct}%</strong> (${grade.correct}/${grade.total})</div></div>` +
@@ -65,9 +88,20 @@ function renderResults(grade, normalized, survey) {
     `<section class="results-block"><h2>Focus areas</h2>` +
     (weak.length ? `<ul>${weak.map((w) => `<li>${w.topic} (${w.pct}%) ${links(w.topic)}</li>`).join('')}</ul>` : '<p>No weak areas — excellent!</p>') +
     `</section>` +
+    `<section class="results-block review-block" hidden>${reviewRows}</section>` +
+    `<button class="review-toggle">Review answers ▼</button>` +
     `<button class="retake">Retake assessment</button>`;
 
   el.hidden = false;
+
+  const reviewSection = el.querySelector('.review-block');
+  const toggleBtn = el.querySelector('.review-toggle');
+  toggleBtn.addEventListener('click', () => {
+    const isHidden = reviewSection.hidden;
+    reviewSection.hidden = !isHidden;
+    toggleBtn.textContent = isHidden ? 'Hide answers ▲' : 'Review answers ▼';
+  });
+
   el.querySelector('.retake').addEventListener('click', () => {
     window.clearProgress();
     location.reload();
@@ -75,7 +109,7 @@ function renderResults(grade, normalized, survey) {
   window.scrollTo(0, 0);
 }
 
-const api = { marker, buildStudyList, renderResults };
+const api = { marker, buildStudyList, formatAnswer, renderResults };
 if (typeof module !== 'undefined' && module.exports) module.exports = api;
 if (typeof window !== 'undefined') {
   window.renderResults = renderResults;

@@ -20,3 +20,10 @@ code { font-family: ui-monospace, monospace; }
 button.retake { margin-top: 1.5rem; padding: .6rem 1.2rem; background: var(--accent); color: #fff; border: 0; border-radius: 6px; cursor: pointer; }
 section.results-block { margin: 1.5rem 0; }
 section.results-block h2 { border-bottom: 1px solid #222; padding-bottom: .3rem; }
+section.review-block { padding: .5rem 0; }
+.review-row { padding: .75rem; margin: .5rem 0; border-radius: 6px; border-left: 4px solid; }
+.review-row.ok { border-color: var(--ok); background: rgba(46,204,113,.08); }
+.review-row.bad { border-color: var(--bad); background: rgba(231,76,60,.08); }
+.review-q { font-weight: 600; margin-bottom: .4rem; }
+.review-ans { font-size: .9rem; color: #bbb; margin-top: .2rem; }
+button.review-toggle { margin-top: 1rem; margin-right: .75rem; padding: .5rem 1rem; background: transparent; color: var(--accent); border: 1px solid var(--accent); border-radius: 6px; cursor: pointer; font-size: .95rem; }
