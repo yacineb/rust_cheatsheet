@@ -1,0 +1,96 @@
+window.registerTopic('Language Sugar & Type Coercions', [
+  { id: 'sugar-1', difficulty: 'Basic', type: 'boolean',
+    title: 'Passing <code>&String</code> to a function that expects <code>&str</code> compiles in Rust because of automatic Deref coercion.',
+    correct: true,
+    studyRef: { cheats: 'https://cheats.rs/#language-sugar' } },
+
+  { id: 'sugar-2', difficulty: 'Basic', type: 'multi',
+    title: 'Which of the following are Deref coercions Rust applies automatically? (select all that apply)',
+    choices: ['<code>&String</code> → <code>&str</code>', '<code>&Vec&lt;T&gt;</code> → <code>&[T]</code>', '<code>&Box&lt;T&gt;</code> → <code>&T</code>', '<code>&i32</code> → <code>&f64</code>'],
+    correct: ['<code>&String</code> → <code>&str</code>', '<code>&Vec&lt;T&gt;</code> → <code>&[T]</code>', '<code>&Box&lt;T&gt;</code> → <code>&T</code>'],
+    studyRef: { cheats: 'https://cheats.rs/#language-sugar' } },
+
+  { id: 'sugar-3', difficulty: 'Intermediate', type: 'single',
+    title: 'What is the key semantic difference between <code>Borrow&lt;T&gt;</code> and <code>AsRef&lt;T&gt;</code>?',
+    choices: [
+      '<code>Borrow&lt;T&gt;</code> additionally requires that <code>Hash</code>, <code>Eq</code>, and <code>Ord</code> of the borrowed value agree with those of the owner; <code>AsRef&lt;T&gt;</code> only requires a cheap reference conversion',
+      '<code>AsRef&lt;T&gt;</code> is for heap types; <code>Borrow&lt;T&gt;</code> is for stack types',
+      '<code>Borrow&lt;T&gt;</code> can return a mutable reference; <code>AsRef&lt;T&gt;</code> cannot',
+      'They are interchangeable — <code>AsRef&lt;T&gt;</code> is a deprecated alias for <code>Borrow&lt;T&gt;</code>',
+    ],
+    correct: '<code>Borrow&lt;T&gt;</code> additionally requires that <code>Hash</code>, <code>Eq</code>, and <code>Ord</code> of the borrowed value agree with those of the owner; <code>AsRef&lt;T&gt;</code> only requires a cheap reference conversion',
+    studyRef: { cheats: 'https://cheats.rs/#type-conversions' } },
+
+  { id: 'sugar-4', difficulty: 'Intermediate', type: 'single',
+    title: 'Which of these signatures can Rust infer the output lifetime for without an explicit annotation?',
+    choices: [
+      '<code>fn first(x: &str, y: &str) -> &str</code>',
+      '<code>fn identity(s: &str) -> &str</code>',
+      '<code>fn merge(a: &str, b: &str, c: &str) -> &str</code>',
+      'None — output lifetimes always require explicit annotation',
+    ],
+    correct: '<code>fn identity(s: &str) -> &str</code>',
+    studyRef: { cheats: 'https://cheats.rs/#lifetimes' } },
+
+  { id: 'sugar-5', difficulty: 'Intermediate', type: 'single',
+    title: 'When is turbofish syntax (<code>::<></code>) required in Rust?',
+    choices: [
+      'When calling any generic function',
+      'When the compiler cannot infer a type argument from context and disambiguation is needed',
+      'Only when the return type has a lifetime parameter',
+      'When calling methods with more than two generic parameters',
+    ],
+    correct: 'When the compiler cannot infer a type argument from context and disambiguation is needed',
+    studyRef: { cheats: 'https://cheats.rs/#generics-constraints' } },
+
+  { id: 'sugar-6', difficulty: 'Advanced', type: 'single',
+    title: 'What does <code>fn foo&lt;T: ?Sized&gt;(t: &T)</code> accept that <code>fn foo&lt;T&gt;(t: &T)</code> does not?',
+    choices: [
+      'References to dynamically sized types such as <code>&str</code> and <code>&[T]</code>',
+      'Raw pointers in addition to references',
+      'Types that do not implement any trait',
+      'Mutable references in addition to shared references',
+    ],
+    correct: 'References to dynamically sized types such as <code>&str</code> and <code>&[T]</code>',
+    studyRef: { cheats: 'https://cheats.rs/#generics-constraints' } },
+
+  { id: 'sugar-7', difficulty: 'Advanced', type: 'single',
+    title: 'What is "match ergonomics" in Rust?',
+    choices: [
+      'Automatic addition of <code>ref</code> and <code>&</code> patterns when the scrutinee is a reference, so you rarely need to write them explicitly',
+      'A shorthand that reduces pattern-match arms to one line',
+      'Automatic derivation of <code>PartialEq</code> when you write a <code>match</code> expression',
+      'Skipping exhaustiveness checks for large enums',
+    ],
+    correct: 'Automatic addition of <code>ref</code> and <code>&</code> patterns when the scrutinee is a reference, so you rarely need to write them explicitly',
+    studyRef: { cheats: 'https://cheats.rs/#language-sugar' } },
+
+  { id: 'sugar-8', difficulty: 'Advanced', type: 'single',
+    title: 'What is a reborrow, as in <code>&mut *r</code> where <code>r: &mut T</code>?',
+    choices: [
+      'A new <code>&mut T</code> active only until <code>r</code> is next used, after which <code>r</code> regains exclusive access',
+      'A raw pointer cast from <code>&mut T</code>',
+      'An immutable <code>&T</code> derived from <code>&mut T</code>',
+      'A clone of the reference with an extended lifetime',
+    ],
+    correct: 'A new <code>&mut T</code> active only until <code>r</code> is next used, after which <code>r</code> regains exclusive access',
+    studyRef: { cheats: 'https://cheats.rs/#language-sugar' } },
+
+  { id: 'sugar-9', difficulty: 'Expert', type: 'single',
+    title: 'Why does <code>let x: &\'static u32 = &42;</code> compile without any <code>unsafe</code> code?',
+    choices: [
+      'Rvalue static promotion: the compiler stores integer literals in read-only static memory when a reference to them is taken',
+      'All integer literals are heap-allocated and never freed',
+      'All references default to <code>\'static</code> unless explicitly bounded by a shorter lifetime',
+      'It does not compile; a <code>\'static</code> reference requires an explicit <code>static</code> item declaration',
+    ],
+    correct: 'Rvalue static promotion: the compiler stores integer literals in read-only static memory when a reference to them is taken',
+    studyRef: { cheats: 'https://cheats.rs/#language-sugar' } },
+
+  { id: 'sugar-10', difficulty: 'Expert', type: 'code',
+    title: 'What does this print? (method resolution and Deref)',
+    code: "use std::ops::Deref;\nstruct Wrapper(String);\nimpl Deref for Wrapper {\n    type Target = String;\n    fn deref(&self) -> &String { &self.0 }\n}\nfn main() {\n    let w = Wrapper(String::from(\"hello\"));\n    println!(\"{}\", w.len());\n}",
+    choices: ['Compile error: <code>len</code> is not defined on <code>Wrapper</code>', '5', '0', 'Panics at runtime'],
+    correct: '5',
+    studyRef: { cheats: 'https://cheats.rs/#language-sugar' } },
+]);

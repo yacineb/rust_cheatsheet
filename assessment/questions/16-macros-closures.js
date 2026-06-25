@@ -1,0 +1,97 @@
+window.registerTopic('Macros, Closures & API Design', [
+  { id: 'macapi-1', difficulty: 'Basic', type: 'single',
+    title: 'In a <code>macro_rules!</code> pattern, which fragment specifier captures any Rust expression?',
+    choices: ['<code>:ty</code>', '<code>:expr</code>', '<code>:ident</code>', '<code>:stmt</code>'],
+    correct: '<code>:expr</code>',
+    studyRef: { cheats: 'https://cheats.rs/#macros-attributes' } },
+
+  { id: 'macapi-2', difficulty: 'Basic', type: 'single',
+    title: 'Which closure trait must a closure implement to be callable multiple times while only immutably borrowing its captured variables?',
+    choices: ['<code>FnOnce</code>', '<code>FnMut</code>', '<code>Fn</code>', '<code>Clone</code>'],
+    correct: '<code>Fn</code>',
+    studyRef: { cheats: 'https://cheats.rs/#closures-in-apis' } },
+
+  { id: 'macapi-3', difficulty: 'Intermediate', type: 'single',
+    title: 'Which correctly describes the supertrait relationship between <code>Fn</code>, <code>FnMut</code>, and <code>FnOnce</code>?',
+    choices: [
+      '<code>Fn: FnMut: FnOnce</code> — every <code>Fn</code> also implements <code>FnMut</code> and <code>FnOnce</code>; <code>Fn</code> is the most restrictive',
+      '<code>FnOnce: FnMut: Fn</code> — every <code>FnOnce</code> also implements <code>Fn</code>; <code>FnOnce</code> is the most restrictive',
+      'They are independent traits; a closure implements exactly one of them',
+      '<code>FnMut</code> is a supertrait of both <code>Fn</code> and <code>FnOnce</code>',
+    ],
+    correct: '<code>Fn: FnMut: FnOnce</code> — every <code>Fn</code> also implements <code>FnMut</code> and <code>FnOnce</code>; <code>Fn</code> is the most restrictive',
+    studyRef: { cheats: 'https://cheats.rs/#closures-in-apis' } },
+
+  { id: 'macapi-4', difficulty: 'Intermediate', type: 'single',
+    title: 'The orphan rule prevents implementing a trait for a type when:',
+    choices: [
+      'Both the trait and the type are defined in external crates',
+      'The type is not public (<code>pub</code>)',
+      'The trait has more than one method',
+      'The type already implements <code>Drop</code>',
+    ],
+    correct: 'Both the trait and the type are defined in external crates',
+    studyRef: { cheats: 'https://cheats.rs/#foreign-types-and-traits' } },
+
+  { id: 'macapi-5', difficulty: 'Intermediate', type: 'single',
+    title: 'What does <code>#[non_exhaustive]</code> on a public <code>enum</code> in a library crate prevent downstream crates from doing?',
+    choices: [
+      'Adding new variants',
+      'Exhaustively matching the enum without a wildcard (<code>_</code>) arm',
+      'Deriving <code>Debug</code> and <code>Clone</code>',
+      'Using the enum as a function return type',
+    ],
+    correct: 'Exhaustively matching the enum without a wildcard (<code>_</code>) arm',
+    studyRef: { cheats: 'https://cheats.rs/#api-stability' } },
+
+  { id: 'macapi-6', difficulty: 'Advanced', type: 'multi',
+    title: 'Which of the following are valid <code>macro_rules!</code> fragment specifiers? (select all that apply)',
+    choices: ['<code>:expr</code>', '<code>:ty</code>', '<code>:ident</code>', '<code>:tt</code>', '<code>:val</code>'],
+    correct: ['<code>:expr</code>', '<code>:ty</code>', '<code>:ident</code>', '<code>:tt</code>'],
+    studyRef: { cheats: 'https://cheats.rs/#macros-attributes' } },
+
+  { id: 'macapi-7', difficulty: 'Advanced', type: 'code',
+    title: 'Which values can be passed as <code>f</code> to this function?',
+    code: 'fn apply<F: Fn(i32) -> i32>(f: F) -> i32 { f(5) }',
+    choices: [
+      'Only non-capturing closures',
+      'Non-mutating closures and <code>fn</code> pointers — closures that mutate captured state (<code>FnMut</code> only) are excluded',
+      'Any closure including ones that mutate or consume their captures',
+      'Only <code>fn</code> pointers, not closures',
+    ],
+    correct: 'Non-mutating closures and <code>fn</code> pointers — closures that mutate captured state (<code>FnMut</code> only) are excluded',
+    studyRef: { cheats: 'https://cheats.rs/#closures-in-apis' } },
+
+  { id: 'macapi-8', difficulty: 'Advanced', type: 'single',
+    title: 'What does <code>struct Buffer&lt;const N: usize&gt; { data: [u8; N] }</code> provide that <code>struct Buffer { data: Vec&lt;u8&gt; }</code> cannot?',
+    choices: [
+      'A fixed-size stack allocation whose size is a compile-time constant — no heap allocation',
+      'A buffer that can grow at runtime without reallocation',
+      'Thread-safe access without <code>Arc</code>',
+      'Automatic <code>Default</code> implementation for any <code>N</code>',
+    ],
+    correct: 'A fixed-size stack allocation whose size is a compile-time constant — no heap allocation',
+    studyRef: { cheats: 'https://cheats.rs/#generics-constraints' } },
+
+  { id: 'macapi-9', difficulty: 'Expert', type: 'single',
+    title: 'What problem do Generic Associated Types (GATs) solve that a regular associated type cannot?',
+    choices: [
+      'Returning borrowed data whose lifetime is tied to <code>&self</code> from a trait method',
+      'Implementing the same trait twice for one type with different type arguments',
+      'Making an associated type implement multiple traits simultaneously',
+      'Defining recursive type aliases inside a trait',
+    ],
+    correct: 'Returning borrowed data whose lifetime is tied to <code>&self</code> from a trait method',
+    studyRef: { cheats: 'https://cheats.rs/#generics-constraints' } },
+
+  { id: 'macapi-10', difficulty: 'Expert', type: 'single',
+    title: 'What does the <code>:tt</code> (token tree) fragment specifier match in <code>macro_rules!</code>?',
+    choices: [
+      'Only a single identifier token',
+      'A single token or a balanced group of tokens enclosed by <code>()</code>, <code>[]</code>, or <code>{}</code>',
+      'A complete Rust statement ending with <code>;</code>',
+      'Any valid type expression',
+    ],
+    correct: 'A single token or a balanced group of tokens enclosed by <code>()</code>, <code>[]</code>, or <code>{}</code>',
+    studyRef: { cheats: 'https://cheats.rs/#macros-attributes' } },
+]);

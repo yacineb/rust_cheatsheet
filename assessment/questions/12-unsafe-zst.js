@@ -67,4 +67,48 @@ window.registerTopic('Unsafe, Raw pointers, Pinning & ZST', [
     ],
     correct: 'Moving the struct would invalidate internal pointers — Pin is used to prevent such moves',
     studyRef: { readme: '#pinning-and-self-referential-structs' } },
+
+  { id: 'unsafe-repr-1', difficulty: 'Intermediate', type: 'single',
+    title: 'What does <code>#[repr(C)]</code> guarantee about a struct\'s memory layout?',
+    choices: [
+      'Fields are laid out in declaration order with C-compatible alignment and padding, making the struct safe to pass across FFI boundaries',
+      'The struct contains no padding bytes between fields',
+      'The struct is zero-sized',
+      'The struct automatically implements <code>Copy</code>',
+    ],
+    correct: 'Fields are laid out in declaration order with C-compatible alignment and padding, making the struct safe to pass across FFI boundaries',
+    studyRef: { cheats: 'https://cheats.rs/#memory-layout' } },
+
+  { id: 'unsafe-repr-2', difficulty: 'Advanced', type: 'single',
+    title: 'When is <code>#[repr(transparent)]</code> required?',
+    choices: [
+      'When a newtype wrapper must have exactly the same memory layout as its single non-ZST field — required for sound transmutation or FFI type aliasing',
+      'When a struct contains only raw pointer fields',
+      'When a struct needs to be passed by value across FFI without boxing',
+      'When the struct derives both <code>Clone</code> and <code>Copy</code>',
+    ],
+    correct: 'When a newtype wrapper must have exactly the same memory layout as its single non-ZST field — required for sound transmutation or FFI type aliasing',
+    studyRef: { cheats: 'https://cheats.rs/#memory-layout' } },
+
+  { id: 'unsafe-repr-3', difficulty: 'Advanced', type: 'single',
+    title: 'What does <code>#[repr(packed)]</code> do?',
+    choices: [
+      'Removes padding bytes between fields, packing them at one-byte alignment — may cause unaligned reads and requires <code>unsafe</code> to take references to fields',
+      'Compresses the struct with run-length encoding at compile time',
+      'Restricts field visibility to the current module',
+      'Allocates the struct in static memory automatically',
+    ],
+    correct: 'Removes padding bytes between fields, packing them at one-byte alignment — may cause unaligned reads and requires <code>unsafe</code> to take references to fields',
+    studyRef: { cheats: 'https://cheats.rs/#memory-layout' } },
+
+  { id: 'unsafe-unpin', difficulty: 'Expert', type: 'single',
+    title: 'What does the <code>Unpin</code> auto-trait signify for a type?',
+    choices: [
+      'The type can be safely moved even after being wrapped in <code>Pin</code> — <code>Pin</code> provides no additional guarantee for <code>Unpin</code> types',
+      'The type must never be moved once placed on the heap',
+      'The type uses a custom allocator that prevents movement',
+      'The type does not implement <code>Drop</code>',
+    ],
+    correct: 'The type can be safely moved even after being wrapped in <code>Pin</code> — <code>Pin</code> provides no additional guarantee for <code>Unpin</code> types',
+    studyRef: { cheats: 'https://cheats.rs/#pinning' } },
 ]);

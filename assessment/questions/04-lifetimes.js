@@ -62,4 +62,15 @@ window.registerTopic('Lifetimes & Variance', [
     ],
     correct: 'Returning y with lifetime \'b where \'a is expected — no proof that \'b: \'a',
     studyRef: { cheats: 'https://cheats.rs/#lifetimes' } },
+
+  { id: 'lt-hrtb', difficulty: 'Expert', type: 'single',
+    title: 'What does the type <code>for&lt;\'a&gt; fn(&\'a str)</code> mean, and how does it differ from <code>fn(&\'a str)</code> with a named <code>\'a</code>?',
+    choices: [
+      'A higher-ranked function type callable with a <code>&str</code> of any lifetime, whereas <code>fn(&\'a str)</code> fixes a specific lifetime <code>\'a</code>',
+      'A function that stores a reference and extends its lifetime to <code>\'static</code>',
+      'A function that can only be called once, regardless of the lifetime',
+      'Syntax sugar for <code>fn(&str)</code> — the two forms are identical',
+    ],
+    correct: 'A higher-ranked function type callable with a <code>&str</code> of any lifetime, whereas <code>fn(&\'a str)</code> fixes a specific lifetime <code>\'a</code>',
+    studyRef: { cheats: 'https://cheats.rs/#higher-ranked-items' } },
 ]);
