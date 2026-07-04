@@ -1,2 +1,3 @@
 [workspace]
-members = ["app1", "lib1"]
+resolver = "2"
+members = ["app1", "lib1", "tokio-streams-course"]

@@ -1,0 +1,29 @@
+[package]
+name = "tokio-streams-course"
+version = "0.1.0"
+edition = "2021"
+
+# A hands-on crash course on Tokio / async streams.
+#
+# Run any worked example:   cargo run -p tokio-streams-course --bin ex01_basics
+# Do the practice drills:   edit src/bin/drills.rs, then
+#                           cargo test -p tokio-streams-course --bin drills
+# Peek at drill answers:    cargo test -p tokio-streams-course --bin drills_solved
+
+[dependencies]
+# The runtime. "full" gives us time, sync, macros, rt-multi-thread, etc.
+tokio = { version = "1.52", features = ["full"] }
+
+# Stream trait + StreamExt combinators + StreamMap + channel wrappers.
+# "sync" -> ReceiverStream/BroadcastStream/WatchStream. "time" (default) -> IntervalStream/throttle.
+tokio-stream = { version = "0.1.18", features = ["sync", "time"] }
+
+# CancellationToken lives here (tokio_util::sync::CancellationToken).
+tokio-util = { version = "0.7.18", features = ["full"] }
+
+# `futures::StreamExt` adds buffered / buffer_unordered / for_each_concurrent,
+# plus stream::unfold. We use it alongside tokio-stream where noted.
+futures = "0.3"
+
+# The `stream! { ... yield x; }` macro for writing streams like async fns.
+async-stream = "0.3"
