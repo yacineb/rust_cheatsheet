@@ -1,0 +1,22 @@
+[build-system]
+requires = ["maturin>=1.5,<2.0"]
+build-backend = "maturin"
+
+[project]
+name = "tabular_accel"
+requires-python = ">=3.8"
+description = "PyO3 + rayon + numpy accelerator for tabular ML hot paths"
+classifiers = [
+    "Programming Language :: Rust",
+    "Programming Language :: Python :: Implementation :: CPython",
+]
+# Runtime deps are empty on purpose: the extension has no Python-side deps.
+# numpy/scipy below are only needed to RUN the benchmark, not to use the module.
+dependencies = []
+
+[project.optional-dependencies]
+bench = ["numpy", "scipy", "pytest"]
+
+[tool.maturin]
+# Forwards the extension-module feature so `maturin develop` builds correctly.
+features = ["pyo3/extension-module"]

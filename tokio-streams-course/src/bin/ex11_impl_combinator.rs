@@ -12,9 +12,10 @@
 //! We build `dedup`: drops CONSECUTIVE duplicate items. It also shows the important
 //! "loop until Ready" shape: one call to our poll_next may need several inner polls.
 
+use futures::StreamExt;
 use std::pin::Pin;
 use std::task::{Context, Poll};
-use tokio_stream::{Stream, StreamExt};
+use tokio_stream::Stream;
 
 /// The combinator struct: owns the inner stream + a little state (the last item seen).
 pub struct Dedup<S: Stream> {
@@ -24,7 +25,7 @@ pub struct Dedup<S: Stream> {
 
 impl<S> Stream for Dedup<S>
 where
-    S: Stream + Unpin,           // lets us Pin::new(&mut inner) without unsafe/pin-project
+    S: Stream + Unpin, // lets us Pin::new(&mut inner) without unsafe/pin-project
     S::Item: Clone + PartialEq + Unpin, // + Unpin so `Dedup<S>: Unpin` => we can touch fields
 {
     type Item = S::Item;
@@ -50,7 +51,10 @@ where
 /// Extension trait so it reads like a built-in: `stream.dedup()`.
 pub trait DedupExt: Stream + Sized {
     fn dedup(self) -> Dedup<Self> {
-        Dedup { inner: self, last: None }
+        Dedup {
+            inner: self,
+            last: None,
+        }
     }
 }
 impl<S: Stream> DedupExt for S {}
@@ -58,16 +62,6 @@ impl<S: Stream> DedupExt for S {}
 #[tokio::main]
 async fn main() {
     let input = tokio_stream::iter(vec![1, 1, 2, 2, 2, 3, 1, 1, 4]);
-    let deduped: Vec<i32> = input.dedup().collect().await;
-    println!("dedup -> {deduped:?}"); // [1, 2, 3, 1, 4]  (only *consecutive* dups removed)
-
-    // Compose it with the built-in combinators — it's a first-class stream.
-    let out: Vec<i32> = tokio_stream::iter(vec![5, 5, 6, 6, 7])
-        .dedup()
-        .map(|x| x * 10)
-        .collect()
-        .await;
-    println!("dedup + map -> {out:?}"); // [50, 60, 70]
 
     // ┌─────────────────────────── YOUR TURN ───────────────────────────┐
     // │ Write a `StepBy` combinator + `.step_by_stream(n)` ext method that │
@@ -76,3 +70,47 @@ async fn main() {
     // │ the ones whose index % n == 0. Test it on iter(0..20).step_by(3).  │
     // └──────────────────────────────────────────────────────────────────┘
 }
+
+pub struct StepBy<S> {
+    inner: S,
+    step: usize,
+    index: usize,
+}
+
+impl<S> Stream for StepBy<S>
+where
+    S: Stream + Unpin,
+    //S::Item: Clone,
+{
+    type Item = S::Item;
+
+    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        match self.inner.poll_next_unpin(cx) {
+            Poll::Ready(None) => Poll::Ready(None),
+            Poll::Ready(Some(item)) => {
+                let res = if self.index % self.step == 0 {
+                    Poll::Ready(Some(item))
+                } else {
+                    Poll::Pending
+                };
+                self.as_mut().index += 1;
+
+                res
+            }
+
+            Poll::Pending => Poll::Pending,
+        }
+    }
+}
+
+pub trait StepByExt: Stream + Sized {
+    fn step_by_stream(self, n: usize) -> StepBy<Self> {
+        StepBy {
+            inner: self,
+            step: n,
+            index: 0,
+        }
+    }
+}
+
+impl<S: Stream> StepByExt for S {}

@@ -1,0 +1,31 @@
+# Empty [workspace] keeps this crate out of the parent rust_cheatsheet workspace —
+# it's a standalone maturin project with its own build.
+[workspace]
+
+[package]
+name = "tabular_accel"
+version = "0.1.0"
+edition = "2021"
+description = "PyO3 + rayon + numpy accelerator for tabular ML preprocessing/inference hot paths"
+
+[lib]
+# cdylib is what Python loads (a .so / .pyd). The module name MUST match the
+# `#[pymodule]` fn name and the `name` Python imports.
+name = "tabular_accel"
+crate-type = ["cdylib"]
+
+[dependencies]
+# `extension-module` tells PyO3 NOT to link libpython — the interpreter provides
+# the symbols at load time. This is what makes the wheel portable.
+pyo3 = { version = "0.22", features = ["extension-module"] }
+numpy = "0.22"          # rust-numpy: zero-copy bridge between numpy arrays and ndarray
+rayon = "1.10"          # data parallelism for the GIL-released sections
+
+[profile.release]
+# These three matter for a fair benchmark vs numpy. Without them you are
+# measuring an un-optimized build and will draw wrong conclusions.
+lto = true              # cross-crate inlining (lets rayon/ndarray inline into your code)
+codegen-units = 1       # better optimization at the cost of compile time
+# NOTE: do NOT set `panic = "abort"` in a PyO3 extension. PyO3 catches Rust
+# panics and converts them to a Python `PanicException`; `abort` would instead
+# kill the whole interpreter. See COURSE.md §2.7.

@@ -10,6 +10,8 @@
 //! each drill `use`s exactly the trait it needs — note which methods come from where.
 #![allow(unused)] // stub file: todo!() bodies leave imports/params "unused" until you fill them
 
+use tokio::sync::watch::Receiver;
+
 // `main` is unused; drills run via `cargo test`. This silences the "no main output" noise.
 fn main() {
     println!("Run the drills with: cargo test -p tokio-streams-course --bin drills");
@@ -20,7 +22,8 @@ fn main() {
 async fn d1_sum_even(n: i64) -> i64 {
     use tokio_stream::StreamExt;
     // Hint: tokio_stream::iter(0..n).filter(..).fold(0, ..).await
-    todo!("filter evens and fold to a sum")
+    let stream = tokio_stream::iter(1..n).filter(|n| n % 2 == 0);
+    stream.fold(0, |acc, item| acc + item).await
 }
 
 // ── D2 (async transform) ───────────────────────────────────────────────────
@@ -32,7 +35,8 @@ async fn d2_async_double(input: Vec<i32>) -> Vec<i32> {
         x * 2
     }
     // Hint: tokio_stream::iter(input).then(double).collect().await
-    todo!("use .then(double) then .collect()")
+
+    tokio_stream::iter(input).then(double).collect().await
 }
 
 // ── D3 (channels) ──────────────────────────────────────────────────────────
@@ -41,9 +45,20 @@ async fn d2_async_double(input: Vec<i32>) -> Vec<i32> {
 async fn d3_drain_channel() -> Vec<i32> {
     use tokio_stream::wrappers::ReceiverStream;
     use tokio_stream::StreamExt;
-    // Hint: make (tx, rx); tokio::spawn a task sending 0..5 then dropping tx;
-    //       ReceiverStream::new(rx).collect().await
-    todo!("bridge an mpsc receiver into a stream and collect it")
+
+    let (tx, rx) = tokio::sync::mpsc::channel(10);
+
+    tokio::spawn(async move {
+        for i in 0..5 {
+            if tx.send(i).await.is_err() {
+                return;
+            }
+        }
+    });
+
+    tokio_stream::wrappers::ReceiverStream::new(rx)
+        .collect()
+        .await
 }
 
 // ── D4 (merge / fan-in) ────────────────────────────────────────────────────
@@ -51,8 +66,13 @@ async fn d3_drain_channel() -> Vec<i32> {
 // the results SORTED (so the test is order-independent).
 async fn d4_merge_sorted() -> Vec<i32> {
     use tokio_stream::StreamExt;
-    // Hint: a.merge(b).collect().await, then sort the Vec.
-    todo!("merge two iter streams, collect, sort")
+
+    let evens = tokio_stream::iter(0..6).filter(|x| x % 2 == 0);
+    let odds = tokio_stream::iter(0..6).filter(|x| x % 2 == 1);
+
+    let mut merged: Vec<_> = evens.merge(odds).collect().await;
+    merged.sort();
+    merged
 }
 
 // ── D5 (StreamMap / keyed fan-in) ──────────────────────────────────────────
@@ -60,10 +80,22 @@ async fn d4_merge_sorted() -> Vec<i32> {
 // consume it, and return (count_from_a, count_from_b).
 async fn d5_stream_map_counts() -> (u32, u32) {
     use tokio_stream::{StreamExt, StreamMap};
-    // Hint: let mut map = StreamMap::new();
-    //       insert("a", iter(vec![..;3])); insert("b", iter(vec![..;2]));
-    //       while let Some((key, _)) = map.next().await { bump the right counter }
-    todo!("count items per source key")
+
+    let mut map = StreamMap::new();
+    map.insert("a", tokio_stream::iter(1..=3));
+    map.insert("b", tokio_stream::iter(1..=2));
+
+    let (mut count_a, mut count_b) = (0, 0);
+    while let Some((key, value)) = map.next().await {
+        if key == "a" {
+            count_a += 1;
+        }
+        if key == "b" {
+            count_b += 1;
+        }
+    }
+
+    (count_a, count_b)
 }
 
 // ── D6 (fan-out / bounded concurrency) ─────────────────────────────────────
@@ -75,9 +107,13 @@ async fn d6_concurrent_squares(inputs: Vec<u64>) -> Vec<u64> {
         tokio::time::sleep(std::time::Duration::from_millis(5)).await;
         x * x
     }
-    // Hint: futures::stream::iter(inputs).map(square).buffer_unordered(4).collect().await
-    //       then sort.
-    todo!("map to futures, buffer_unordered(4), collect, sort")
+    let mut stream: Vec<_> = futures::stream::iter(inputs)
+        .map(square)
+        .buffer_unordered(4)
+        .collect()
+        .await;
+    stream.sort();
+    stream
 }
 
 // ── D7 (cancellation semantics) ────────────────────────────────────────────
@@ -86,9 +122,18 @@ async fn d6_concurrent_squares(inputs: Vec<u64>) -> Vec<u64> {
 // (Teaches `take_until`: once the future resolves, the stream ends.)
 async fn d7_drain_take_until(values: Vec<i32>, stop_now: bool) -> Vec<i32> {
     use futures::StreamExt; // take_until lives on futures' StreamExt
-    // Hint: if stop_now, use `async {}` (ready now) as the stop future;
-    //       else use `std::future::pending::<()>()` (never). Then .collect().await.
-    todo!("take_until with either a ready or a never-ready future")
+                            // Hint: if stop_now, use `async {}` (ready now) as the stop future;
+                            //       else use `std::future::pending::<()>()` (never). Then .collect().await.
+    let mut stream = tokio_stream::iter(values);
+
+    if stop_now {
+        stream.take_until(async {}).collect().await
+    } else {
+        stream
+            .take_until(std::future::pending::<()>())
+            .collect()
+            .await
+    }
 }
 
 // ── D8 (implement a stream via async-stream) ───────────────────────────────
@@ -181,19 +226,25 @@ mod tests {
     }
     #[tokio::test]
     async fn t6() {
-        assert_eq!(d6_concurrent_squares(vec![1, 2, 3, 4, 5]).await, vec![1, 4, 9, 16, 25]);
+        assert_eq!(
+            d6_concurrent_squares(vec![1, 2, 3, 4, 5]).await,
+            vec![1, 4, 9, 16, 25]
+        );
     }
     #[tokio::test]
     async fn t7() {
-        assert_eq!(d7_drain_take_until(vec![1, 2, 3], false).await, vec![1, 2, 3]);
-        assert_eq!(d7_drain_take_until(vec![1, 2, 3], true).await, Vec::<i32>::new());
+        assert_eq!(
+            d7_drain_take_until(vec![1, 2, 3], false).await,
+            vec![1, 2, 3]
+        );
+        assert_eq!(
+            d7_drain_take_until(vec![1, 2, 3], true).await,
+            Vec::<i32>::new()
+        );
     }
     #[tokio::test]
     async fn t8() {
-        assert_eq!(
-            d8_fizzbuzz(5).await,
-            vec!["1", "2", "Fizz", "4", "Buzz"]
-        );
+        assert_eq!(d8_fizzbuzz(5).await, vec!["1", "2", "Fizz", "4", "Buzz"]);
         assert_eq!(d8_fizzbuzz(15).await[14], "FizzBuzz");
     }
     #[tokio::test]
@@ -211,12 +262,14 @@ mod tests {
     #[tokio::test]
     async fn t11() {
         assert_eq!(d11_parse_all(vec!["1", "2", "3"]).await, Ok(vec![1, 2, 3]));
-        assert_eq!(d11_parse_all(vec!["1", "x", "3"]).await, Err("bad: x".to_string()));
+        assert_eq!(
+            d11_parse_all(vec!["1", "x", "3"]).await,
+            Err("bad: x".to_string())
+        );
     }
     #[tokio::test]
     async fn t12() {
-        let (oks, nerr) =
-            d12_partition(vec![Ok(1), Err("a".into()), Ok(3), Err("b".into())]).await;
+        let (oks, nerr) = d12_partition(vec![Ok(1), Err("a".into()), Ok(3), Err("b".into())]).await;
         assert_eq!(oks, vec![1, 3]);
         assert_eq!(nerr, 2);
     }

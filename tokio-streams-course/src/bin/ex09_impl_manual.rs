@@ -60,6 +60,7 @@ impl Stream for Ticker {
 
     fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<u32>> {
         if self.remaining == 0 {
+            // end of stream
             return Poll::Ready(None);
         }
         // Poll the child future. If it's Pending, IT registered our waker — so we just
@@ -84,7 +85,10 @@ async fn main() {
     println!("Counter -> {nums:?}"); // [0,1,2,3,4]
 
     // Because Counter is Unpin we can call .next() directly; still, collect works too.
-    let mut c = Counter { current: 10, max: 13 };
+    let mut c = Counter {
+        current: 10,
+        max: 13,
+    };
     while let Some(n) = c.next().await {
         println!("counter tick {n}");
     }

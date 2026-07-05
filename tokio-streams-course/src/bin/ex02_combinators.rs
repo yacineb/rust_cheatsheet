@@ -10,6 +10,7 @@
 //! Those extras live on `futures::StreamExt` (see ex06). Know which trait you imported.
 
 use std::time::Duration;
+use tokio::time::error::Elapsed;
 use tokio_stream::StreamExt;
 
 async fn double_slowly(x: i32) -> i32 {
