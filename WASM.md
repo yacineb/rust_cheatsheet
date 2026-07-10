@@ -22,7 +22,8 @@
 6. [Threads (if you really must)](#6-threads-if-you-really-must)
 7. [Build, size, and performance quirks](#7-build-size-and-performance-quirks)
 8. [WASI: server-side wasm has an OS again](#8-wasi-server-side-wasm-has-an-os-again)
-9. [Checklist, crates, further reading](#9-checklist-crates-further-reading)
+9. [Debugging & logging](#9-debugging--logging)
+10. [Checklist, crates, further reading](#10-checklist-crates-further-reading)
 
 ---
 
@@ -317,6 +318,45 @@ pub fn make() -> Result<JsValue, JsValue> {
 }
 ```
 
+### 4.8 wasm-bindgen memory footguns (the consolidated list)
+
+wasm straddles two heaps that neither garbage-collect each other nor share pointers: the **JS GC heap** and
+**wasm linear memory**. wasm-bindgen stitches them together with raw pointers and handle tables — and every
+leak or use-after-free lives in that seam. The recurring ones, in one place:
+
+| Footgun | What goes wrong | Fix |
+|---|---|---|
+| **Not `.free()`-ing an exported struct** | JS holds a raw pointer into linear memory; GC never reclaims it → leak (§4.5) | call `.free()`; don't rely on `FinalizationRegistry` |
+| **Using a handle after it's moved/freed** | `self`-by-value methods and passing a struct *into* JS **consume** the pointer; next use throws `null pointer passed to rust` | treat the JS wrapper as moved; drop your reference to it |
+| **Double `.free()`** | the second free is a use-after-free → trap | free exactly once |
+| **`.view()` held across an alloc/`await`** | memory growth detaches the `ArrayBuffer` → reads zeros / throws (§4.4) | copy immediately; never retain a view |
+| **`Closure` dropped too early** | JS fires the callback → `closure invoked after being dropped` (§4.6) | store it as long as the subscription lives |
+| **`Closure::forget()` as the "fix"** | permanent leak — linear memory never shrinks (§7) | store & drop, don't forget |
+| **Holding a `JsValue` you never drop** | the handle **roots** a JS object; Rust keeps JS memory alive → a JS-side leak authored in Rust | scope `JsValue`s; drop them promptly |
+| **Cycle across the boundary** | Rust owns a `Closure`/`JsValue`, JS (an event target) owns a ref back → neither GC nor Rust can collect it | break it manually; explicit teardown / weak refs |
+| **`Rc`/`Arc` reference cycle** | same as native — but the "process" is a long-lived tab, so the leak is *forever* | `Weak` for back-edges |
+| **`mem::forget` / `Box::leak`** | never reclaimed, and memory can't shrink to hand it back (§7) | avoid unless genuinely `'static` |
+| **Getter returning owned `String`/`Vec`** | allocates + copies across the boundary **every call** — churns in hot loops | cache it, or expose a view/length API |
+| **Big one-shot copy in/out of JS** | transiently doubles the buffer; the peak sets the module's *permanent* footprint (§7) | stream/chunk large transfers |
+
+Three that deserve a sentence more:
+
+**`JsValue` is a root, not just a handle.** wasm-bindgen keeps JS objects alive in a JS-side table indexed
+by your `JsValue`; the object cannot be collected while any `JsValue` referencing it is alive in wasm. So a
+`Vec<JsValue>` you forget to clear is a *JS* memory leak written in Rust. Dropping the `JsValue` releases
+the table slot — which is why wasm memory can look flat while the JS heap climbs.
+
+**The `FinalizationRegistry` safety net is best-effort.** Modern wasm-bindgen (with `--weak-refs`, on by
+default where the host supports it) registers a finalizer that `free`s an exported struct when its JS
+wrapper is collected — but GC timing is unspecified, finalizers may never run, and older hosts have no net
+at all. **Never** rely on it for bounded memory, cleanup ordering, or releasing anything scarce; explicit
+`.free()` is the contract.
+
+**A leak in wasm is forever.** There's no process exit to sweep it — the "process" is the browser tab and
+linear memory only grows (§7). A per-frame forgotten `.free()` or a `.forget()`-ed closure is a monotonic
+climb to an OOM trap. In dev, log `wasm.memory.buffer.byteLength` over time so a slow leak is visible long
+before users hit it.
+
 ---
 
 ## 5. Async across the boundary
@@ -357,26 +397,43 @@ tokio = { version = "1", default-features = false, features = [
 ] }
 ```
 
-What each tier actually does **in the browser** (`wasm32-unknown-unknown`):
+Which features actually **function**, and where — the part that trips people up (`✅` works · `⚠️`
+compiles but caveated · `❌` won't even compile):
 
-- ✅ **`sync` + `macros` are the real win.** `tokio::sync::{mpsc, oneshot, watch, Notify, Semaphore}` and
-  `select!`/`join!` are pure state machines with **no OS dependency** — they work perfectly and are
-  genuinely useful for wiring together futures. This is the 90% case: use tokio as a *library of async
-  primitives*, not as a runtime.
-- ⚠️ **`time` compiles but timers are unbacked on `unknown-unknown`.** Tokio's timer wheel needs a clock
-  and a wakeup source; the browser target has neither, so `tokio::time::sleep` / `Instant::now()`
-  **panic** (same root cause as §1.1). Timers *do* work under `wasm32-wasi`. In the browser, use
-  `gloo-timers` instead.
-- ⚠️ **`rt` is current-thread only, and `block_on` is a trap on the main thread.** You can build a
-  `new_current_thread()` runtime, but `Runtime::block_on` blocks the calling thread — and in the browser
-  that thread *is* the event loop you're running on, so it deadlocks/freezes the tab (§1.3). In practice
-  you don't spin up a tokio runtime in the browser at all: **`wasm-bindgen-futures::spawn_local` is your
-  executor**, and tokio supplies the primitives that run *inside* those tasks.
-- ❌ **No I/O reactor, ever.** `tokio::net`, `tokio::fs`, `tokio::process`, `tokio::signal`, and
-  `rt-multi-thread` aren't supported on any wasm target — they don't even compile, which is *why* you have
-  to disable default features.
+| tokio feature | `wasm32-unknown-unknown` (browser) | `wasm32-wasi` (server) |
+|---|---|---|
+| `sync` (`Mutex`, `mpsc`, `oneshot`, `watch`, `Notify`, `Semaphore`…) | ✅ | ✅ |
+| `macros` (`select!`, `join!`, `#[tokio::test]`) | ✅ | ✅ |
+| `io-util` (`AsyncReadExt`/`AsyncWriteExt` combinators) | ✅ | ✅ |
+| `rt` (current-thread runtime) | ✅ builds & runs, **but `block_on` freezes the main thread** | ✅ |
+| `time` (`sleep`, `interval`, `Instant`, `timeout`) | ⚠️ compiles, but timers **panic** — no clock source | ✅ WASI has a timer |
+| `rt-multi-thread` | ❌ | ❌ |
+| `net` (`TcpStream`, `UdpSocket`…) | ❌ | ⚠️ only under `tokio_unstable` + host support |
+| `fs`, `process`, `signal`, `io-std` | ❌ | ❌ |
+| `full` / **default features** | ❌ | ❌ |
 
-The practical recipe for browser wasm — tokio primitives, wasm-bindgen runtime, gloo timers:
+Two things to internalize from that table:
+
+- The supported set is exactly **`sync`, `macros`, `io-util`, `rt`, `time`** — nothing else. Enabling any
+  other feature (or leaving default features on) is a **compile error**, not a runtime surprise; the
+  toolchain refuses to build rather than link a driver that can't exist.
+- `time` is the one that "compiles ≠ works": it builds on both targets but only *functions* where a timer
+  exists (`wasm32-wasi`). On `unknown-unknown` a `tokio::time::sleep(..).await` panics at runtime.
+- `tokio_unstable` (a `RUSTFLAGS` cfg) unlocks a little more on **WASI only** — notably `net` — and nothing
+  extra for the browser target.
+
+So in the browser the working setup is a **division of labor** — tokio for primitives, wasm-bindgen for
+the runtime, gloo for time:
+
+- **tokio = async primitives.** `tokio::sync::{mpsc, oneshot, watch, Notify, Semaphore}` and
+  `select!`/`join!` are pure state machines with no OS dependency — the 90% case. Treat tokio as a
+  *library*, not a runtime.
+- **`wasm-bindgen-futures` = the runtime.** `spawn_local` drives your futures; there's no tokio runtime to
+  stand up, and `block_on` on the main thread freezes the tab (§1.3), so you never call it.
+- **`gloo-timers` = time.** Swap `tokio::time::sleep` for `gloo_timers::future::sleep` (tokio's own timer
+  panics on `unknown-unknown`, per the table).
+
+Putting it together:
 
 ```rust
 use tokio::sync::mpsc;
@@ -472,7 +529,105 @@ browser UI, WASI is the target you want — and the JS-boundary machinery in §4
 
 ---
 
-## 9. Checklist, crates, further reading
+## 9. Debugging & logging
+
+The browser is your only window into a running module, and the two default channels are both broken:
+**`stdout` is discarded** (`println!`/`dbg!` go nowhere, §1) and **panics are opaque traps** (`RuntimeError:
+unreachable`, no message, §2). Observability on wasm is therefore something you *set up*, not something you
+get for free. The good news: once wired, the browser DevTools are a genuinely good debugger.
+
+### 9.1 Logging — getting text out
+
+Everything routes through the JS console. Three layers, cheapest first:
+
+- **Raw:** `web_sys::console::log_1(&"hi".into())` (also `warn_*`, `error_*`, `info_*`, `debug_*` — they map
+  to the DevTools level filters). The classic ergonomic wrapper:
+
+  ```rust
+  macro_rules! console_log { ($($t:tt)*) => (web_sys::console::log_1(&format!($($t)*).into())) }
+  console_log!("frame {frame} took {dt:.2}ms");
+  ```
+- **`log` facade → console:** keep idiomatic `log::info!` / `warn!` / `error!` and install a backend
+  ([`console_log`](https://docs.rs/console_log) or `wasm-logger`) once at startup. Now library code that
+  already uses `log` just works.
+- **`tracing` → console + timeline:** for spans/structured fields use
+  [`tracing-wasm`](https://docs.rs/tracing-wasm) or `tracing-web`; `tracing-wasm` also emits
+  `performance.measure` marks so your spans show up on the **Performance timeline** (§9.4).
+
+Gotchas specific to wasm:
+
+- **`println!`, `eprintln!`, `dbg!` are silent** on `wasm32-unknown-unknown` (no stdout/stderr). They *do*
+  work under WASI, printing to the host. Don't reach for them in the browser — they look like they work in
+  native tests and then vanish.
+- **No `RUST_LOG`.** There are no env vars (§1), so you can't set the level from the environment. Set it in
+  code (`init_with_level(Level::Debug)`), thread it in from JS, or filter at **compile time** with `log`'s
+  `max_level_*` features — which also strips the verbose calls from the binary (size, §7).
+- **Log rich values, not `Debug` strings.** Passing a JS *object* (build one with `serde-wasm-bindgen`) to
+  `console::log_1` gives DevTools an **inspectable, expandable tree** — far better than a flattened
+  `{:?}`. Reserve `format!("{x:?}")` for when you only have a Rust `Debug` impl.
+
+### 9.2 Panics & backtraces
+
+Recap of §2, because it's the highest-leverage line you'll add: install
+[`console_error_panic_hook`](https://docs.rs/console_error_panic_hook) so a panic prints a **message + JS
+stack** instead of a bare trap. To get **Rust symbol names** in that stack (not `wasm-function[1234]`) you
+need the wasm **name section** / debug info kept in the build (§9.3). `debug_assert!` fires only in debug
+builds — cheap invariant checks you can leave in during development.
+
+### 9.3 Source-level debugging (breakpoints in `.rs`)
+
+Modern Chromium DevTools can debug Rust wasm at the **source level** — breakpoints in your `.rs` files,
+stepping, inspecting Rust variables — via DWARF:
+
+- Build with debug info: `wasm-pack build --dev` (or `--debug`), or a profile with `debug = true` and no
+  `strip`; and pass `--keep-debug` to `wasm-bindgen`. `wasm-opt` will drop debug info unless you keep it.
+- In Chrome, enable **"WebAssembly Debugging: Enable DWARF support"** (install the *C/C++/Rust DevTools
+  support* extension). Firefox has partial support. Now the Sources panel shows Rust, and breakpoints hit.
+- Even without full DWARF, **keep the name section** so stack traces and the profiler show real function
+  names instead of indices.
+- Trade-off: debug builds are large and slow. **Debug in dev, ship `--release`** (§7).
+
+### 9.4 Profiling & memory
+
+- **CPU:** the DevTools **Performance** panel records wasm frames (needs the name section). Add user-timing
+  markers from Rust with `web_sys::console::time_with_label` / `time_end_with_label`, or `performance.mark`
+  / `measure`, to annotate the flame chart. `tracing-wasm` spans surface here automatically.
+- **Memory:** watch `WebAssembly.Memory` in the Memory panel; since linear memory only grows (§7), a leak
+  is a monotonic climb — log `wasm.memory.buffer.byteLength` over time in dev to catch a slow one before it
+  OOM-traps (§4.8). For **code size**, profile with [`twiggy`](https://github.com/rustwasm/twiggy) and
+  `wasm-opt` (§7).
+
+### 9.5 Testing in a real engine
+
+Don't test wasm behavior on the native target — timers, the boundary, and JS APIs differ. Use
+[`wasm-bindgen-test`](https://docs.rs/wasm-bindgen-test): annotate with `#[wasm_bindgen_test]` and run in a
+headless browser or Node against the **actual** wasm:
+
+```bash
+wasm-pack test --headless --firefox      # or --chrome / --safari
+wasm-pack test --node                     # no DOM, faster
+```
+
+### Minimal "see everything" dev setup
+
+```rust
+#[wasm_bindgen(start)]
+pub fn start() {
+    console_error_panic_hook::set_once();                       // readable panics + stack
+    console_log::init_with_level(log::Level::Debug).unwrap();   // log::* → browser console
+}
+```
+
+```toml
+console_error_panic_hook = "0.1"
+console_log = { version = "1", features = ["color"] }
+log = "0.4"
+web-sys = { version = "0.3", features = ["console"] }
+```
+
+---
+
+## 10. Checklist, crates, further reading
 
 ### Pre-flight checklist for `wasm32-unknown-unknown`
 
@@ -481,7 +636,7 @@ browser UI, WASI is the target you want — and the JS-boundary machinery in §4
 3. **`getrandom` js backend enabled** if anything uses randomness or `HashMap` seeding (§1.2).
 4. **Time via `web-time`/`chrono`** (or `Date`/`performance`), never bare `Instant::now()` (§1.1).
 5. **Nothing blocks the main thread** — no `sleep`, no `block_on`, chunk long compute (§1.3).
-6. **`.free()` every exported struct**; audit `Closure` lifetimes (`.forget()` = leak) (§4.5–4.6).
+6. **`.free()` every exported struct**; audit `Closure`/`JsValue` lifetimes (`.forget()` = leak) — see the memory-footguns list (§4.8).
 7. **No `.view()` kept across `await`/allocation** — memory growth detaches it (§4.4).
 8. **Batch across the boundary**; strings/slices copy, `u64` becomes `BigInt` (§3–4).
 9. **Size profile** (`twiggy`, `wasm-opt`, `opt-level="z"`, `strip`) before shipping (§7).
@@ -496,7 +651,8 @@ browser UI, WASI is the target you want — and the JS-boundary machinery in §4
 | Async / promises | `wasm-bindgen-futures`, `gloo` (`gloo-timers`, `gloo-net`, `gloo-events`) |
 | Time / dates | `chrono` (default `wasmbind` → `js_sys::Date`), `web-time` (`Instant`/`SystemTime`), `time` 0.3 (`wasm-bindgen` feature) |
 | Randomness | `getrandom` (`js` feature / `wasm_js` backend) |
-| Panics / logging | `console_error_panic_hook`, `log` + `console_log`, `tracing-wasm` |
+| Panics / logging | `console_error_panic_hook`, `log` + `console_log` (or `wasm-logger`), `tracing-wasm` / `tracing-web` |
+| Debugging / testing | `wasm-bindgen-test` (`wasm-pack test --headless`), browser DevTools DWARF, `--keep-debug` |
 | Structured data | `serde-wasm-bindgen`, `serde` |
 | Threads / parallelism | `wasm-bindgen-rayon` (needs COOP/COEP + atomics) |
 | Framework (SPA in Rust) | `leptos`, `yew`, `dioxus`, `sycamore` |
