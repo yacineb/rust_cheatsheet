@@ -28,7 +28,8 @@
 9. [Swift, iOS, and macOS](#9-swift-ios-and-macos)
 10. [Kotlin: JVM and Multiplatform Native](#10-kotlin-jvm-and-multiplatform-native)
 11. [The high-level path: uniffi and swift-bridge](#11-the-high-level-path-uniffi-and-swift-bridge)
-12. [Checklist, crates, further reading](#12-checklist-crates-further-reading)
+12. [Interview Q&A](#12-interview-qa)
+13. [Checklist, crates, further reading](#13-checklist-crates-further-reading)
 
 ---
 
@@ -532,7 +533,81 @@ languages, generate the bindings** and keep your hand-written `unsafe` surface n
 
 ---
 
-## 12. Checklist, crates, further reading
+## 12. Interview Q&A
+
+Rapid-fire, senior-level. Answers are deliberately terse — each links the section with the full story.
+
+**Fundamentals**
+
+- **Q: Why can't you pass a Rust `String` or `Vec<T>` across FFI by value?**
+  They're `repr(Rust)` structs whose internal `(ptr, len, cap)` layout is unspecified (and can change per
+  compiler version), tied to Rust's allocator, with no C equivalent. Decompose to `(ptr, len)` for borrows,
+  or move ownership via `Box::into_raw` / a `#[repr(C)]` `{ptr,len,cap}` struct with a matching free (§2.2).
+- **Q: What's the only stable ABI Rust exposes, and its "safe subset"?**
+  The C ABI. Safe subset = `extern "C"` fns + `#[repr(C)]`/`transparent` types + primitive scalars + raw
+  pointers. Everything richer is reduced to that and reconstructed on the far side (§0).
+- **Q: What does `#[repr(C)]` fix, and what does default layout do?**
+  `repr(Rust)` may reorder fields and exploit niches, so layout isn't stable. `#[repr(C)]` pins C field
+  order + padding; `#[repr(transparent)]` gives a newtype its single field's ABI (ideal for handles) (§1).
+- **Q: Is `Option<&T>` FFI-safe? Why?**
+  Yes — niche optimization makes `Option<&T>` (also `Option<Box<T>>`, `Option<NonNull<T>>`,
+  `Option<extern fn>`) identical in layout to the pointer, with `None == NULL`. The idiomatic nullable
+  pointer (§1).
+
+**Memory & safety**
+
+- **Q: Who owns memory across the boundary — the cardinal rule?**
+  Whoever allocates frees, through the *same* allocator (Rust's ≠ libc `free` ≠ JVM/Swift heap). Ship a
+  paired `*_free`; balance each `Box::into_raw` with exactly one `from_raw`; `Drop` never runs across FFI so
+  destructors are explicit (§2.3).
+- **Q: What happens when a panic reaches an `extern "C"` boundary?**
+  Pre-1.81: UB. Since 1.81: aborts the process by default. Aborting is safe but usually hostile to the host,
+  so wrap the body in `catch_unwind` and return an error code. `extern "C-unwind"` only when both sides
+  cooperate (§3.1).
+- **Q: No `Result`/exceptions in C — how do you report errors?**
+  Integer status codes + value via out-param, or null-on-failure, or errno-style thread-local last-error.
+  Keep the rich `Result` internal; map to stable codes only in the shell — never leak Rust error types
+  (§3.2).
+- **Q: Name a subtle string bug and a subtle layout bug.**
+  `CString::new(s).unwrap().as_ptr()` dangles — the temporary drops at the `;`. And `&packed.field` on a
+  `#[repr(C, packed)]` struct is UB (possible misalignment) — use `read_unaligned`/`addr_of!` (§1–§2).
+
+**API design**
+
+- **Q: What's the opaque-handle pattern, and why the default?**
+  `Box` the struct, hand out `*mut Opaque`; ops take that pointer + primitives; one `*_free` reclaims it.
+  The consumer holds a token and never sees the layout, so internals evolve freely. It's exactly pyo3's
+  `#[pyclass]` model (§4).
+- **Q: Design a Rust API callable from Swift, Kotlin, and JS — walk me through it.**
+  One narrow C-ABI waist: opaque handle per object, functions taking handle + scalars, symmetric
+  `new`/`free`, errors as codes + out-params, no panics across the line, nullability/thread-safety in docs.
+  Then *generate* bindings — uniffi (Swift + Kotlin), wasm-bindgen (JS) — rather than hand-rolling three
+  shims. Anchor: *"same discipline I've shipped with pyo3 → Python."* (§4, §11).
+- **Q: How do you keep the `unsafe` surface small?**
+  The `extern "C"` shell does all validation (null/length/UTF-8) — parse-don't-validate at the edge — then
+  calls into ordinary safe, borrow-checked Rust that assumes valid inputs. `unsafe` stays confined to the
+  boundary (§4).
+
+**Targets & tooling**
+
+- **Q: `staticlib` vs `cdylib` — when each?**
+  `cdylib` = shared lib loaded at runtime (Android `System.loadLibrary`, `dlopen`, dynamic C). `staticlib` =
+  `.a` linked at build time (iOS `.xcframework`, static C). `rlib` is Rust-only, not for FFI (§6).
+- **Q: `cbindgen` vs `bindgen`?**
+  Opposite directions: `cbindgen` emits a C header *from* your Rust (exporting); `bindgen` emits Rust
+  `extern "C"` decls *from* a C header (importing) (§6).
+- **Q: Calling into the JVM from a Rust-spawned thread — what breaks?**
+  `JNIEnv` is per-thread and `!Send` — you can't reuse another thread's. Hold the shareable `JavaVM`,
+  `attach_current_thread()` on the new thread, detach before exit, and catch panics → throw a Java exception
+  (§8).
+- **Q: When reach for uniffi instead of hand-rolling?**
+  When targeting managed languages / multiple platforms: uniffi generates idiomatic Kotlin/Swift/Python and
+  handles lifecycle, type mapping, panics→exceptions, and errors from one Rust interface. Hand-roll
+  `extern "C"` + cbindgen only for plain C or codegen backends; use `cxx` for C++ (§11).
+
+---
+
+## 13. Checklist, crates, further reading
 
 ### FFI review checklist
 

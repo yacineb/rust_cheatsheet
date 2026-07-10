@@ -2,6 +2,11 @@
 
 ## Rust cheat sheet
 
+> **Companion deep-dives** — this README is the scannable reference; each of these goes deep on one topic:
+> - [PERFORMANCE.md](./PERFORMANCE.md) — high-performance Rust for mission-critical/low-latency systems
+> - [WASM.md](./WASM.md) — Rust → WebAssembly: quirks, what breaks, tokio-on-wasm, and the JS boundary
+> - [FFI.md](./FFI.md) — crossing the C ABI to C/C++, Swift, Kotlin/Android: quirks, API design, and targets
+
 ### Bootstrap environment
 
 - `cargo build` to build-install deps
